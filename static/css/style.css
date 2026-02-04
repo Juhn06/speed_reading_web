@@ -6,7 +6,9 @@
 
 body {
     font-family: 'Segoe UI', Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background:
+    linear-gradient(rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8)),
+    url('https://images.unsplash.com/photo-1517842645767-c639042777db?w=1920') center/cover no-repeat fixed;
     min-height: 100vh;
     display: flex;
     justify-content: center;
