@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đang Đọc...</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="reader-page">
+    <div class="reader-container">
+        <!-- Hiển thị từ -->
+        <div class="word-display" id="wordDisplay">
+            Nhấn nút Play để bắt đầu
+        </div>
+
+        <!-- Thông tin -->
+        <div class="info">
+            <p>⏱️ Thời gian: <span id="timer">00:00</span></p>
+            <p>📊 Tiến độ: <span id="progress">0</span>/<span id="total">0</span> từ</p>
+            <p>🚀 Tốc độ: <span id="currentSpeed">0</span> từ/phút</p>
+        </div>
+
+        <!-- Nút điều khiển -->
+        <div class="controls">
+            <button onclick="startReading()" id="playBtn">▶️ Play</button>
+            <button onclick="pauseReading()" id="pauseBtn">⏸️ Pause</button>
+            <button onclick="resetReading()">🔄 Reset</button>
+            <button onclick="goBack()">🏠 Về trang chủ</button>
+        </div>
+    </div>
+
+    <script src="/static/js/reader.js"></script>
+</body>
+</html>

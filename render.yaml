@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: speed-reading-app
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+```
+
+Thêm vào file `requirements.txt`:
+```
+Flask==3.0.0
+python-docx==1.1.0
+PyPDF2==3.0.1
+gunicorn==21.2.0
+```
+
+### Bước 2: Upload code lên GitHub
+
+1. Tạo tài khoản GitHub: https://github.com
+2. Tạo repository mới
+3. Upload toàn bộ code lên GitHub
+
+### Bước 3: Deploy trên Render
+
+1. Vào: https://render.com
+2. Đăng ký tài khoản (dùng GitHub)
+3. Click **New +** → **Web Service**
+4. Chọn repository của bạn
+5. Click **Create Web Service**
+6. Đợi 5-10 phút deploy xong
+
+### Bước 4: Truy cập
+
+Render sẽ cho bạn URL:
+```
+https://speed-reading-app.onrender.com
