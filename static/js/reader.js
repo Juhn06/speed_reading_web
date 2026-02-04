@@ -6,6 +6,8 @@ let currentIndex = 0;
 let intervalId = null;
 let startTime = null;
 let isPaused = false;
+let timerInterval = null;
+let pausedTime = 0; // Lưu thời gian đã pause
 
 // Hiển thị thông tin ban đầu
 document.getElementById('total').textContent = words.length;
@@ -21,11 +23,22 @@ function startReading() {
         return;
     }
 
+    // Nếu chưa bắt đầu lần nào
     if (!startTime) {
         startTime = Date.now();
+        startTimer();
     }
 
-    isPaused = false;
+    // Nếu đang pause, tiếp tục từ vị trí cũ
+    if (isPaused) {
+        isPaused = false;
+        startTime = Date.now() - pausedTime; // Điều chỉnh lại thời gian
+    }
+
+    // Clear interval cũ nếu có
+    if (intervalId) {
+        clearInterval(intervalId);
+    }
 
     intervalId = setInterval(() => {
         if (currentIndex < words.length) {
@@ -36,9 +49,6 @@ function startReading() {
             finishReading();
         }
     }, intervalTime);
-
-    // Cập nhật timer
-    updateTimer();
 }
 
 // Hiển thị từ
@@ -48,16 +58,28 @@ function displayWord(word) {
 
 // Tạm dừng
 function pauseReading() {
-    clearInterval(intervalId);
+    if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+    }
     isPaused = true;
+
+    // Lưu thời gian đã chạy
+    if (startTime) {
+        pausedTime = Date.now() - startTime;
+    }
 }
 
 // Reset
 function resetReading() {
     clearInterval(intervalId);
+    clearInterval(timerInterval);
+    intervalId = null;
+    timerInterval = null;
     currentIndex = 0;
     startTime = null;
     isPaused = false;
+    pausedTime = 0;
 
     document.getElementById('wordDisplay').textContent = 'Nhấn Play để bắt đầu';
     document.getElementById('timer').textContent = '00:00';
@@ -70,8 +92,12 @@ function updateProgress() {
 }
 
 // Cập nhật thời gian
-function updateTimer() {
-    setInterval(() => {
+function startTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+
+    timerInterval = setInterval(() => {
         if (!isPaused && startTime) {
             let elapsed = Math.floor((Date.now() - startTime) / 1000);
             let minutes = Math.floor(elapsed / 60);
@@ -86,6 +112,7 @@ function updateTimer() {
 // Hoàn thành
 function finishReading() {
     clearInterval(intervalId);
+    clearInterval(timerInterval);
 
     let totalTime = Math.floor((Date.now() - startTime) / 1000);
     let minutes = Math.floor(totalTime / 60);
