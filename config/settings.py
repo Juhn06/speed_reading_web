@@ -21,6 +21,8 @@ class Config:
     UPLOAD_FOLDER = 'uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
     ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx'}
+    AVATAR_UPLOAD_FOLDER = os.path.join('static', 'uploads', 'avatars')
+    ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
     # Pagination
     ITEMS_PER_PAGE = 10

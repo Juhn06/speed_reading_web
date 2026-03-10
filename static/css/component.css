@@ -348,6 +348,10 @@
     display: block;
 }
 
+.dropdown.open .dropdown-menu {
+    display: block;
+}
+
 .dropdown-item {
     display: flex;
     align-items: center;

@@ -172,6 +172,7 @@ function copyToClipboard(text) {
 document.addEventListener('DOMContentLoaded', () => {
     const navbarToggle = document.getElementById('navbarToggle');
     const navbarMenu = document.querySelector('.navbar-menu');
+    const dropdowns = document.querySelectorAll('.dropdown');
 
     if (navbarToggle && navbarMenu) {
         navbarToggle.addEventListener('click', () => {
@@ -183,6 +184,26 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!navbarToggle.contains(e.target) && !navbarMenu.contains(e.target)) {
                 navbarMenu.classList.remove('active');
             }
+        });
+    }
+
+    if (dropdowns.length) {
+        dropdowns.forEach((dropdown) => {
+            const toggle = dropdown.querySelector('.dropdown-toggle');
+            const menu = dropdown.querySelector('.dropdown-menu');
+
+            if (!toggle || !menu) {
+                return;
+            }
+
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('open');
+            });
+        });
+
+        document.addEventListener('click', () => {
+            dropdowns.forEach((dropdown) => dropdown.classList.remove('open'));
         });
     }
 });

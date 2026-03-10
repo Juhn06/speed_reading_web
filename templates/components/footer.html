@@ -9,7 +9,7 @@
             <div class="footer-links">
                 <h4>Liên kết</h4>
                 <ul>
-                    <li><a href="{{ url_for('main') }}">Trang chủ</a></li>
+                    <li><a href="{{ url_for('main.index') }}">Trang chủ</a></li>
                     <li><a href="{{ url_for('main.about') }}">Giới thiệu</a></li>
                     {% if current_user.is_authenticated %}
                     <li><a href="{{ url_for('user.dashboard') }}">Dashboard</a></li>
@@ -25,12 +25,12 @@
         </div>
 
         <div class="footer-bottom">
-            <p>&copy; 2024 Speed Reading System. All rights reserved.</p>
+            <p>&copy; 2026 Speed Reading System. All rights reserved.</p>
             <p>Developed by
                 {% if current_user.is_authenticated %}
                     {{ current_user.username }}
                 {% else %}
-                    Your Name
+                    Nguyen Thi Xuan
                 {% endif %}
             </p>
         </div>

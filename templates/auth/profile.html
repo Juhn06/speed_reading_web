@@ -21,8 +21,16 @@
                     <h2><i class="fas fa-user"></i> Thông tin cá nhân</h2>
                 </div>
                 <div class="card-body">
-                    <div class="profile-avatar">
-                        <i class="fas fa-user-circle fa-5x"></i>
+                    <div class="profile-avatar" id="avatarPicker">
+                        {% if current_user.avatar %}
+                            <img src="{{ url_for('static', filename='uploads/avatars/' ~ current_user.avatar) }}" alt="Avatar" class="avatar-image" id="avatarImage">
+                        {% else %}
+                            <div class="avatar-placeholder">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                        {% endif %}
+                        <input type="file" id="avatarInput" accept="image/*">
+                        <div class="avatar-hint">Doi anh</div>
                     </div>
                     
                     <div class="profile-details">
@@ -136,6 +144,53 @@
 {% endblock %}
 
 {% block extra_js %}
+
+
+<script>
+    const avatarPicker = document.getElementById('avatarPicker');
+    const avatarInput = document.getElementById('avatarInput');
+    const avatarImage = document.getElementById('avatarImage');
+
+    if (avatarPicker && avatarInput) {
+        avatarPicker.addEventListener('click', () => {
+            avatarInput.click();
+        });
+
+        avatarInput.addEventListener('change', async () => {
+            const file = avatarInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('avatar', file);
+
+            try {
+                showLoading('Dang cap nhat anh...');
+                const response = await fetch('/user/avatar', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                hideLoading();
+
+                if (data.error) {
+                    showAlert(data.error, 'error');
+                    return;
+                }
+
+                if (avatarImage) {
+                    avatarImage.src = `${data.avatar_url}?t=${Date.now()}`;
+                } else {
+                    location.reload();
+                }
+
+                showAlert('Da cap nhat anh dai dien!', 'success');
+            } catch (error) {
+                hideLoading();
+                showAlert('Loi cap nhat anh dai dien', 'error');
+            }
+        });
+    }
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
     // Chart data from backend

@@ -55,6 +55,20 @@ def upload():
         if len(words) == 0:
             return jsonify({'error': 'File không có nội dung!'}), 400
 
+        content = ' '.join(words)
+
+        # Deduplicate by original filename + content for this user
+        existing_doc = Document.query.filter_by(
+            user_id=current_user.id,
+            original_filename=file.filename,
+            content=content
+        ).first()
+
+        if existing_doc:
+            return jsonify({
+                'error': 'Trung file. Vui long upload file khac.'
+            }), 409
+
         # Save document to database
         doc = Document(
             user_id=current_user.id,
@@ -62,7 +76,7 @@ def upload():
             original_filename=file.filename,
             file_type=filename.rsplit('.', 1)[1].lower(),
             word_count=len(words),
-            content=' '.join(words)
+            content=content
         )
         db.session.add(doc)
         db.session.commit()

@@ -20,7 +20,7 @@
         <div class="documents-grid">
             {% for doc in documents %}
             <div class="document-card card">
-                <div class="doc-icon-large">
+                <div class="doc-icon-large {% if doc.file_type == 'pdf' %}doc-icon-pdf{% elif doc.file_type == 'docx' %}doc-icon-docx{% else %}doc-icon-default{% endif %}">
                     {% if doc.file_type == 'pdf' %}
                         <i class="fas fa-file-pdf"></i>
                     {% elif doc.file_type == 'docx' %}
@@ -33,29 +33,42 @@
                 <div class="doc-content">
                     <h3 class="doc-title">{{ doc.original_filename }}</h3>
                     
-                    <div class="doc-info">
-                        <div class="info-item">
-                            <i class="fas fa-font"></i>
-                            <span>{{ doc.word_count }} từ</span>
+                    <div class="doc-stats-table">
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-font"></i> Số từ trong file</div>
+                            <div class="stats-value">{{ doc.word_count }} từ</div>
                         </div>
-                        <div class="info-item">
-                            <i class="fas fa-calendar"></i>
-                            <span>{{ doc.created_at.strftime('%d/%m/%Y') }}</span>
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-calendar"></i> Ngày tạo</div>
+                            <div class="stats-value">{{ doc.created_at.strftime('%d/%m/%Y') }}</div>
                         </div>
-                        <div class="info-item">
-                            <i class="fas fa-redo"></i>
-                            <span>Đọc {{ doc.times_read() }} lần</span>
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-redo"></i> Số lần đọc</div>
+                            <div class="stats-value">{{ doc.times_read() }} lần</div>
+                        </div>
+                        <div class="stats-row stats-row-format">
+                            <div class="stats-label">Định dạng</div>
+                            <div class="stats-value stats-value-format">
+                                <span>{{ doc.file_type|upper }}</span>
+                                {% if doc.file_type == 'pdf' %}
+                                    <i class="fas fa-file-pdf"></i>
+                                {% elif doc.file_type == 'docx' %}
+                                    <i class="fas fa-file-word"></i>
+                                {% else %}
+                                    <i class="fas fa-file-alt"></i>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="doc-actions">
-                        <button class="btn btn-primary" onclick="loadDocument({{ doc.id }})">
-                            <i class="fas fa-book-reader"></i> Đọc ngay
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteDocument({{ doc.id }})">
-                            <i class="fas fa-trash"></i> Xóa
-                        </button>
-                    </div>
+
+                </div>
+                <div class="doc-actions">
+                    <button class="btn btn-primary" onclick="loadDocument({{ doc.id }})">
+                        <i class="fas fa-book-reader"></i> Đọc ngay
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteDocument({{ doc.id }})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
                 </div>
             </div>
             {% endfor %}

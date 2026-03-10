@@ -18,35 +18,35 @@
         <!-- Filter Section -->
         <div class="filter-section card">
             <div class="card-body">
-                <div class="filter-grid">
+                <form class="filter-grid" method="get">
                     <div class="filter-item">
                         <label><i class="fas fa-calendar"></i> Khoảng thời gian:</label>
-                        <select class="form-control" id="dateFilter">
-                            <option value="all">Tất cả</option>
-                            <option value="today">Hôm nay</option>
-                            <option value="week">Tuần này</option>
-                            <option value="month">Tháng này</option>
+                        <select class="form-control" id="dateFilter" name="date" onchange="this.form.submit()">
+                            <option value="all" {% if request.args.get('date', 'all') == 'all' %}selected{% endif %}>Tất cả</option>
+                            <option value="today" {% if request.args.get('date') == 'today' %}selected{% endif %}>Hôm nay</option>
+                            <option value="week" {% if request.args.get('date') == 'week' %}selected{% endif %}>Tuần này</option>
+                            <option value="month" {% if request.args.get('date') == 'month' %}selected{% endif %}>Tháng này</option>
                         </select>
                     </div>
                     
                     <div class="filter-item">
                         <label><i class="fas fa-filter"></i> Trạng thái:</label>
-                        <select class="form-control" id="statusFilter">
-                            <option value="all">Tất cả</option>
-                            <option value="completed">Hoàn thành</option>
-                            <option value="incomplete">Chưa hoàn thành</option>
+                        <select class="form-control" id="statusFilter" name="status" onchange="this.form.submit()">
+                            <option value="all" {% if request.args.get('status', 'all') == 'all' %}selected{% endif %}>Tất cả</option>
+                            <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Hoàn thành</option>
+                            <option value="incomplete" {% if request.args.get('status') == 'incomplete' %}selected{% endif %}>Chưa hoàn thành</option>
                         </select>
                     </div>
                     
                     <div class="filter-item">
                         <label><i class="fas fa-sort"></i> Sắp xếp:</label>
-                        <select class="form-control" id="sortFilter">
-                            <option value="newest">Mới nhất</option>
-                            <option value="oldest">Cũ nhất</option>
-                            <option value="speed">Tốc độ cao nhất</option>
+                        <select class="form-control" id="sortFilter" name="sort" onchange="this.form.submit()">
+                            <option value="newest" {% if request.args.get('sort', 'newest') == 'newest' %}selected{% endif %}>Mới nhất</option>
+                            <option value="oldest" {% if request.args.get('sort') == 'oldest' %}selected{% endif %}>Cũ nhất</option>
+                            <option value="speed" {% if request.args.get('sort') == 'speed' %}selected{% endif %}>Tốc độ cao nhất</option>
                         </select>
                     </div>
-                </div>
+                </form>
             </div>
         </div>
 
@@ -74,49 +74,47 @@
                 </div>
                 
                 <div class="session-body">
-                    <div class="session-stats">
-                        <div class="stat-item">
-                            <i class="fas fa-calendar"></i>
-                            <div>
-                                <div class="stat-label">Ngày đọc</div>
-                                <div class="stat-value">{{ session.format_created_at() }}</div>
+                    <div class="session-stats-table">
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-calendar"></i> Ngày đọc</div>
+                            <div class="stats-value">{{ session.format_created_at() }}</div>
+                        </div>
+
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-gauge-high"></i> Tốc độ</div>
+                            <div class="stats-value">{{ session.speed }} từ/phút</div>
+                        </div>
+
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-clock"></i> Thời gian</div>
+                            <div class="stats-value">{{ session.format_duration() }}</div>
+                        </div>
+
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-list-ol"></i> Từ đã đọc</div>
+                            <div class="stats-value">{{ session.words_read }} từ</div>
+                        </div>
+
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-file-alt"></i> Số từ trong file</div>
+                            <div class="stats-value">{{ session.total_words }} từ</div>
+                        </div>
+
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-chart-line"></i> Hoàn thành</div>
+                            <div class="stats-value">
+                                <div class="progress-inline">
+                                    <div class="progress-inline-bar" style="width: {{ session.get_completion_rate() }}%"></div>
+                                </div>
+                                <div class="progress-inline-meta">
+                                    <span>{{ session.get_completion_rate() }}%</span>
+                                    <span>{{ session.words_read }}/{{ session.total_words }} từ</span>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="stat-item">
-                            <i class="fas fa-gauge-high"></i>
-                            <div>
-                                <div class="stat-label">Tốc độ</div>
-                                <div class="stat-value">{{ session.speed }} từ/phút</div>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-item">
-                            <i class="fas fa-clock"></i>
-                            <div>
-                                <div class="stat-label">Thời gian</div>
-                                <div class="stat-value">{{ session.format_duration() }}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-item">
-                            <i class="fas fa-list-ol"></i>
-                            <div>
-                                <div class="stat-label">Tiến độ</div>
-                                <div class="stat-value">{{ session.words_read }}/{{ session.total_words }} từ</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Progress Bar -->
-                    <div class="progress-section">
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" style="width: {{ session.get_completion_rate() }}%"></div>
-                        </div>
-                        <div class="progress-text">{{ session.get_completion_rate() }}%</div>
                     </div>
                 </div>
-                
+
                 <div class="session-footer">
                     {% if session.document_id %}
                     <button class="btn btn-sm btn-primary" onclick="readAgain({{ session.document_id }})">
@@ -152,8 +150,31 @@
 
 {% block extra_js %}
 <script>
-    function readAgain(docId) {
-        window.location.href = `/reading/load-document/${docId}`;
+    async function readAgain(docId) {
+        try {
+            showLoading('Đang tải tài liệu...');
+
+            const response = await fetch(`/reading/load-document/${docId}`);
+            const data = await response.json();
+
+            hideLoading();
+
+            if (data.error) {
+                showAlert(data.error, 'error');
+                return;
+            }
+
+            localStorage.setItem('words', JSON.stringify(data.words));
+            localStorage.setItem('speed', '200');
+            localStorage.setItem('filename', data.filename);
+            localStorage.setItem('doc_id', data.doc_id);
+            localStorage.setItem('total_words', data.total);
+
+            window.location.href = '/reading/reader';
+        } catch (error) {
+            hideLoading();
+            showAlert('Lỗi tải tài liệu', 'error');
+        }
     }
 
     async function deleteSession(sessionId) {

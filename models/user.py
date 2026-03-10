@@ -20,6 +20,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_admin = db.Column(db.Boolean, default=False)
+    avatar = db.Column(db.String(200), nullable=True)
 
     # Relationships
     reading_sessions = db.relationship('ReadingSession', backref='user', lazy='dynamic', cascade='all, delete-orphan')

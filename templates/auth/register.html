@@ -18,23 +18,22 @@
             <form method="POST" action="{{ url_for('auth.register') }}" class="auth-form">
                 <div class="form-group">
                     <label for="username">
-                        <i class="fas fa-user"></i> Tên đăng nhập *
+                        <i class="fas fa-user"></i> Tên đăng nhập :
                     </label>
                     <input type="text" 
                            id="username" 
                            name="username" 
                            class="form-control" 
-                           placeholder="3-20 ký tự, chỉ chữ và số"
+                           placeholder="3-20 ký tự, chỉ chứa chữ và số"
                            minlength="3"
                            maxlength="20"
                            required
                            autofocus>
-                    <small class="form-text">Chỉ chứa chữ, số và gạch dưới</small>
                 </div>
                 
                 <div class="form-group">
                     <label for="email">
-                        <i class="fas fa-envelope"></i> Email *
+                        <i class="fas fa-envelope"></i> Email :
                     </label>
                     <input type="email" 
                            id="email" 
@@ -46,7 +45,7 @@
                 
                 <div class="form-group">
                     <label for="password">
-                        <i class="fas fa-lock"></i> Mật khẩu *
+                        <i class="fas fa-lock"></i> Mật khẩu :
                     </label>
                     <input type="password" 
                            id="password" 
@@ -59,7 +58,7 @@
                 
                 <div class="form-group">
                     <label for="confirm_password">
-                        <i class="fas fa-lock"></i> Xác nhận mật khẩu *
+                        <i class="fas fa-lock"></i> Xác nhận mật khẩu :
                     </label>
                     <input type="password" 
                            id="confirm_password" 

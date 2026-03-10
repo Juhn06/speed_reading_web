@@ -232,7 +232,24 @@ function updateButton(state) {
 
 // Go back to dashboard
 function goBack() {
-    if (confirm('Bạn chắc chắn muốn thoát? Tiến độ hiện tại sẽ được lưu.')) {
+    if (confirm('Bạn có chắc muốn thoát?Tiến độ hiện tại sẽ được lưu.')) {
         // Save current progress before leaving
         if (startTime && currentIndex > 0) {
-            const totalTime = Math.floor((Date.now() - startTime) / 100
+            const totalTime = Math.floor((Date.now() - startTime) / 1000);
+
+            API.saveSession({
+                doc_id: docId,
+                filename: filename,
+                total_words: totalWords,
+                words_read: currentIndex,
+                speed: speed,
+                duration: totalTime,
+                completed: false
+            }).catch((error) => {
+                console.error('Error saving session:', error);
+            });
+        }
+
+        window.location.href = '/user/dashboard';
+    }
+}
