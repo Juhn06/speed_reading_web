@@ -258,18 +258,36 @@
     });
 
     // Load existing document
-    async function loadDocument(docId) {
-        try {
-            showLoading('Đang tải tài liệu...');
-            
-            const response = await fetch(`/reading/load-document/${docId}`);
-            const data = await response.json();
-            
-            hideLoading();
+async function loadDocument(docId) {
+    try {
+        showLoading('Đang tải tài liệu...');
 
-            if (data.error) {
-                showAlert(data.error, 'error');
-                return;
-            }
+        const response = await fetch(`/reading/load-document/${docId}`);
+        const data = await response.json();
 
-            uploadedData = data;
+        hideLoading();
+
+        if (data.error) {
+            showAlert(data.error, 'error');
+            return;
+        }
+
+        uploadedData = data;
+
+        // Save to localStorage
+        localStorage.setItem('words', JSON.stringify(data.words));
+        localStorage.setItem('speed', '200');
+        localStorage.setItem('filename', data.filename);
+        localStorage.setItem('doc_id', data.doc_id);
+        localStorage.setItem('total_words', data.total);
+
+        // Redirect
+        window.location.href = '/reading/reader';
+
+    } catch (error) {
+        hideLoading();
+        showAlert('Lỗi tải tài liệu', 'error');
+    }
+}
+    </script>
+{% endblock %}

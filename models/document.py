@@ -1,5 +1,5 @@
 """
-Document model
+Document models
 Quản lý tài liệu
 """
 from datetime import datetime

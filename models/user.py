@@ -1,5 +1,5 @@
 """
-User model
+User models
 Quản lý người dùng
 """
 from datetime import datetime

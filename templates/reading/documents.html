@@ -93,7 +93,7 @@
                 return;
             }
 
-            // Save to localStorage
+            //Save to localStorage//
             localStorage.setItem('words', JSON.stringify(data.words));
             localStorage.setItem('speed', '200'); // Default speed
             localStorage.setItem('filename', data.filename);
@@ -105,4 +105,8 @@
 
         } catch (error) {
             hideLoading();
-            showAlert('Lỗi tải tài liệu
+            showAlert('Lỗi tải tài liệu', 'error');
+        }
+    }
+    </script>
+{% endblock %}

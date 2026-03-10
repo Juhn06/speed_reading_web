@@ -1,5 +1,5 @@
 """
-ReadingSession model
+ReadingSession models
 Quản lý phiên đọc
 """
 from datetime import datetime

@@ -20,7 +20,7 @@ def admin_required(f):
 
         if not current_user.is_admin:
             flash('Bạn không có quyền truy cập trang này!', 'danger')
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main'))
 
         return f(*args, **kwargs)
 

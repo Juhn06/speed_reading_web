@@ -100,4 +100,4 @@ def logout():
     """Đăng xuất"""
     logout_user()
     flash('Đã đăng xuất!', 'info')
-    return redirect(url_for('main.index'))
+    return redirect(url_for('main'))
