@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Tài liệu của tôi - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="documents-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-folder-open"></i> Tài liệu của tôi</h1>
+            <p>Quản lý và đọc lại các tài liệu đã lưu</p>
+        </div>
+
+        <!-- Documents Grid -->
+        {% if documents %}
+        <div class="documents-grid">
+            {% for doc in documents %}
+            <div class="document-card card">
+                <div class="doc-icon-large">
+                    {% if doc.file_type == 'pdf' %}
+                        <i class="fas fa-file-pdf"></i>
+                    {% elif doc.file_type == 'docx' %}
+                        <i class="fas fa-file-word"></i>
+                    {% else %}
+                        <i class="fas fa-file-alt"></i>
+                    {% endif %}
+                </div>
+                
+                <div class="doc-content">
+                    <h3 class="doc-title">{{ doc.original_filename }}</h3>
+                    
+                    <div class="doc-info">
+                        <div class="info-item">
+                            <i class="fas fa-font"></i>
+                            <span>{{ doc.word_count }} từ</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-calendar"></i>
+                            <span>{{ doc.created_at.strftime('%d/%m/%Y') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-redo"></i>
+                            <span>Đọc {{ doc.times_read() }} lần</span>
+                        </div>
+                    </div>
+                    
+                    <div class="doc-actions">
+                        <button class="btn btn-primary" onclick="loadDocument({{ doc.id }})">
+                            <i class="fas fa-book-reader"></i> Đọc ngay
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteDocument({{ doc.id }})">
+                            <i class="fas fa-trash"></i> Xóa
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="empty-state card">
+            <div class="card-body">
+                <i class="fas fa-folder-open fa-4x"></i>
+                <h3>Chưa có tài liệu nào</h3>
+                <p>Upload tài liệu mới để bắt đầu luyện đọc!</p>
+                <a href="{{ url_for('user.dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Upload tài liệu
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDocument(docId) {
+        try {
+            showLoading('Đang tải tài liệu...');
+            
+            const response = await fetch(`/reading/load-document/${docId}`);
+            const data = await response.json();
+            
+            hideLoading();
+
+            if (data.error) {
+                showAlert(data.error, 'error');
+                return;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('words', JSON.stringify(data.words));
+            localStorage.setItem('speed', '200'); // Default speed
+            localStorage.setItem('filename', data.filename);
+            localStorage.setItem('doc_id', data.doc_id);
+            localStorage.setItem('total_words', data.total);
+            
+            // Redirect to reader
+            window.location.href = '/reading/reader';
+
+        } catch (error) {
+            hideLoading();
+            showAlert('Lỗi tải tài liệu

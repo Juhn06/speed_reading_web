@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Phiên đọc - Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-sessions-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-history"></i> Quản lý phiên đọc</h1>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại Dashboard
+            </a>
+        </div>
+
+        <!-- Stats Summary -->
+        <div class="stats-summary">
+            <div class="stat-box">
+                <i class="fas fa-book"></i>
+                <div>
+                    <div class="stat-number">{{ pagination.total }}</div>
+                    <div class="stat-label">Tổng phiên</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-check-circle"></i>
+                <div>
+                    <div class="stat-number">{{ pagination.items | selectattr('completed', 'equalto', True) | list | length }}</div>
+                    <div class="stat-label">Hoàn thành</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-clock"></i>
+                <div>
+                    <div class="stat-number">{{ pagination.items | selectattr('completed', 'equalto', False) | list | length }}</div>
+                    <div class="stat-label">Chưa xong</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-gauge-high"></i>
+                <div>
+                    {% set avg_speed = (pagination.items | sum(attribute='speed') / pagination.items | length) if pagination.items | length > 0 else 0 %}
+                    <div class="stat-number">{{ avg_speed | round(0) | int }}</div>
+                    <div class="stat-label">Tốc độ TB</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="admin-toolbar card">
+            <div class="card-body">
+                <div class="toolbar-grid">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" 
+                               id="searchInput" 
+                               placeholder="Tìm theo user hoặc file..."
+                               class="form-control">
+                    </div>
+                    
+                    <select class="form-control" id="statusFilter">
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="completed">Hoàn thành</option>
+                        <option value="incomplete">Chưa hoàn thành</option>
+                    </select>
+                    
+                    <select class="form-control" id="dateFilter">
+                        <option value="all">Tất cả thời gian</option>
+                        <option value="today">Hôm nay</option>
+                        <option value="week">Tuần này</option>
+                        <option value="month">Tháng này</option>
+                    </select>
+                    
+                    <select class="form-control" id="sortBy">
+                        <option value="newest">Mới nhất</option>
+                        <option value="oldest">Cũ nhất</option>
+                        <option value="fastest">Nhanh nhất</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sessions Table -->
+        <div class="admin-table-section card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>User</th>
+                                <th>File</th>
+                                <th>Ngày đọc</th>
+                                <th>Tốc độ</th>
+                                <th>Thời gian</th>
+                                <th>Tiến độ</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in pagination.items %}
+                            <tr>
+                                <td>{{ session.id }}</td>
+                                <td>
+                                    <i class="fas fa-user"></i>
+                                    {{ session.user.username }}
+                                </td>
+                                <td title="{{ session.filename }}">
+                                    {{ session.filename[:30] }}{{ '...' if session.filename|length > 30 else '' }}
+                                </td>
+                                <td>{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ session.speed }} từ/phút</td>
+                                <td>{{ session.format_duration() }}</td>
+                                <td>
+                                    <div class="progress-cell">
+                                        <span>{{ session.words_read }}/{{ session.total_words }}</span>
+                                        <div class="mini-progress">
+                                            <div class="mini-progress-bar" style="width: {{ session.get_completion_rate() }}%"></div>
+                                        </div>
+                                        <span class="progress-percent">{{ session.get_completion_rate() }}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if session.completed %}
+                                    <span class="badge badge-success">
+                                        <i class="fas fa-check"></i> Hoàn thành
+                                    </span>
+                                    {% else %}
+                                    <span class="badge badge-warning">
+                                        <i class="fas fa-clock"></i> Chưa xong
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" 
+                                            onclick="deleteSession({{ session.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% include 'components/pagination.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function deleteSession(sessionId) {
+        if (!confirm('Bạn chắc chắn muốn xóa phiên đọc này?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/user/delete-session/${sessionId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert(data.error, 'error');
+            }
+        } catch (error) {
+            showAlert('Lỗi xóa phiên đọc: ' + error.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

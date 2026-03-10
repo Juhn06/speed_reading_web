@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Trang chủ - Speed Reading{% endblock %}
+
+{% block content %}
+<div class="landing-page">
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-grid">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        <span class="gradient-text">Luyện Đọc Nhanh</span>
+                        <br>Hiệu Quả Vượt Trội
+                    </h1>
+                    <p class="hero-description">
+                        Nâng cao kỹ năng đọc, tăng tốc độ đọc hiểu từ 200 lên 500 từ/phút.
+                        Theo dõi tiến độ, lưu lịch sử và thống kê chi tiết.
+                    </p>
+                    <div class="hero-buttons">
+                        {% if current_user.is_authenticated %}
+                            <a href="{{ url_for('user.dashboard') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-rocket"></i> Vào Dashboard
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-user-plus"></i> Đăng ký miễn phí
+                            </a>
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="hero-image">
+                    <div class="floating-card">
+                        <i class="fas fa-book-open fa-5x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Tính năng nổi bật</h2>
+                <p class="section-description">Những gì bạn có thể làm với Speed Reading</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <h3>Upload Tài Liệu</h3>
+                    <p>Hỗ trợ file .txt, .docx, .pdf. Upload và bắt đầu luyện đọc ngay lập tức.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-gauge-high"></i>
+                    </div>
+                    <h3>Điều Chỉnh Tốc Độ</h3>
+                    <p>Tốc độ từ 100-500 từ/phút, tùy chỉnh theo trình độ của bạn.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3>Lưu Trữ An Toàn</h3>
+                    <p>Tài liệu và lịch sử đọc được lưu trữ bảo mật trên cloud.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Thống Kê Chi Tiết</h3>
+                    <p>Biểu đồ tiến độ, báo cáo học tập đầy đủ và trực quan.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-clock-rotate-left"></i>
+                    </div>
+                    <h3>Lịch Sử Đầy Đủ</h3>
+                    <p>Xem lại mọi phiên đọc, theo dõi sự tiến bộ theo thời gian.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Responsive</h3>
+                    <p>Hoạt động mượt mà trên mọi thiết bị: PC, tablet, mobile.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number">1,234+</div>
+                    <div class="stat-label">Người dùng</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="stat-number">5,678+</div>
+                    <div class="stat-label">Phiên đọc</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div class="stat-number">250</div>
+                    <div class="stat-label">Từ/phút TB</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="stat-number">98%</div>
+                    <div class="stat-label">Hài lòng</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Sẵn sàng cải thiện kỹ năng đọc?</h2>
+                <p>Tham gia cùng hàng nghìn người dùng đang nâng cao tốc độ đọc mỗi ngày!</p>
+                {% if not current_user.is_authenticated %}
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-rocket"></i> Bắt đầu ngay - Miễn phí
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

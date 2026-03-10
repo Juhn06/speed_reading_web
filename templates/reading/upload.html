@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <div class="container">
+        <!-- Welcome Header -->
+        <div class="welcome-header">
+            <h1>Chào mừng, {{ current_user.username }}! 👋</h1>
+            <p>Sẵn sàng luyện đọc hôm nay chưa?</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.total_sessions }}</div>
+                    <div class="stat-label">Tổng phiên đọc</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.completed_sessions }}</div>
+                    <div class="stat-label">Hoàn thành</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-font"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ "{:,}".format(stats.total_words) }}</div>
+                    <div class="stat-label">Từ đã đọc</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-gauge-high"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.avg_speed }}</div>
+                    <div class="stat-label">Từ/phút TB</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="upload-section card">
+            <div class="card-header">
+                <h2><i class="fas fa-upload"></i> Upload tài liệu mới</h2>
+            </div>
+            <div class="card-body">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                    </div>
+                    <p class="upload-text">Kéo thả file vào đây hoặc click để chọn</p>
+                    <p class="upload-hint">Hỗ trợ: .txt, .docx, .pdf (Tối đa 16MB)</p>
+                    <input type="file" 
+                           id="fileInput" 
+                           accept=".txt,.docx,.pdf" 
+                           style="display: none;">
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open"></i> Chọn file
+                    </button>
+                </div>
+
+                <!-- Speed Selection (hidden initially) -->
+                <div class="speed-selection" id="speedSelection" style="display: none;">
+                    <h3>Chọn tốc độ đọc</h3>
+                    <div class="speed-slider">
+                        <input type="range" 
+                               id="speedSlider" 
+                               min="100" 
+                               max="500" 
+                               value="200" 
+                               step="50">
+                        <div class="speed-value">
+                            <span id="speedValue">200</span> từ/phút
+                        </div>
+                    </div>
+                    <button class="btn btn-success btn-lg" id="startReadingBtn">
+                        <i class="fas fa-play"></i> Bắt đầu đọc
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Recent Sessions -->
+            <div class="recent-sessions card">
+                <div class="card-header">
+                    <h2><i class="fas fa-history"></i> Lịch sử gần đây</h2>
+                    <a href="{{ url_for('user.history') }}" class="view-all">
+                        Xem tất cả <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_sessions %}
+                        <div class="sessions-list">
+                            {% for session in recent_sessions %}
+                            <div class="session-item">
+                                <div class="session-icon">
+                                    <i class="fas fa-{{ 'check-circle' if session.completed else 'clock' }}"></i>
+                                </div>
+                                <div class="session-info">
+                                    <div class="session-title">{{ session.filename }}</div>
+                                    <div class="session-meta">
+                                        <span><i class="fas fa-calendar"></i> {{ session.format_created_at() }}</span>
+                                        <span><i class="fas fa-gauge"></i> {{ session.speed }} từ/phút</span>
+                                        <span><i class="fas fa-clock"></i> {{ session.format_duration() }}</span>
+                                    </div>
+                                </div>
+                                <div class="session-progress">
+                                    <span class="progress-text">{{ session.get_completion_rate() }}%</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-inbox fa-3x"></i>
+                            <p>Chưa có lịch sử đọc</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- My Documents -->
+            <div class="my-documents card">
+                <div class="card-header">
+                    <h2><i class="fas fa-folder-open"></i> Tài liệu của tôi</h2>
+                    <a href="{{ url_for('user.documents') }}" class="view-all">
+                        Xem tất cả <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_docs %}
+                        <div class="documents-list">
+                            {% for doc in recent_docs %}
+                            <div class="document-item">
+                                <div class="doc-icon">
+                                    <i class="fas fa-file-{{ doc.file_type }}"></i>
+                                </div>
+                                <div class="doc-info">
+                                    <div class="doc-title">{{ doc.original_filename }}</div>
+                                    <div class="doc-meta">
+                                        <span><i class="fas fa-font"></i> {{ doc.word_count }} từ</span>
+                                        <span><i class="fas fa-redo"></i> {{ doc.times_read() }} lần</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-primary" 
+                                        onclick="loadDocument({{ doc.id }})">
+                                    <i class="fas fa-book-reader"></i> Đọc
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open fa-3x"></i>
+                            <p>Chưa có tài liệu nào</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/api.js') }}"></script>
+<script>
+    let uploadedData = null;
+
+    // File upload
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const speedSelection = document.getElementById('speedSelection');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+
+    // Speed slider
+    speedSlider.oninput = function() {
+        speedValue.textContent = this.value;
+    };
+
+    // File input change
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        await uploadFile(file);
+    });
+
+    // Upload file
+    async function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            showLoading('Đang xử lý file...');
+            
+            const response = await fetch('/reading/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            hideLoading();
+
+            if (data.error) {
+                showAlert(data.error, 'error');
+                return;
+            }
+
+            uploadedData = data;
+            showAlert(`✅ Đã tải ${data.total} từ từ "${data.filename}"`, 'success');
+            
+            // Show speed selection
+            uploadArea.style.display = 'none';
+            speedSelection.style.display = 'block';
+
+        } catch (error) {
+            hideLoading();
+            showAlert('Lỗi upload file: ' + error.message, 'error');
+        }
+    }
+
+    // Start reading
+    document.getElementById('startReadingBtn').addEventListener('click', () => {
+        const speed = speedSlider.value;
+        
+        // Save to localStorage
+        localStorage.setItem('words', JSON.stringify(uploadedData.words));
+        localStorage.setItem('speed', speed);
+        localStorage.setItem('filename', uploadedData.filename);
+        localStorage.setItem('doc_id', uploadedData.doc_id);
+        localStorage.setItem('total_words', uploadedData.total);
+        
+        // Redirect to reader
+        window.location.href = '/reading/reader';
+    });
+
+    // Load existing document
+    async function loadDocument(docId) {
+        try {
+            showLoading('Đang tải tài liệu...');
+            
+            const response = await fetch(`/reading/load-document/${docId}`);
+            const data = await response.json();
+            
+            hideLoading();
+
+            if (data.error) {
+                showAlert(data.error, 'error');
+                return;
+            }
+
+            uploadedData = data;

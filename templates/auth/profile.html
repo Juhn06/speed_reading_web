@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Trang cá nhân - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-user-circle"></i> Trang cá nhân</h1>
+        </div>
+
+        <div class="profile-grid">
+            <!-- User Info Card -->
+            <div class="profile-info-card card">
+                <div class="card-header">
+                    <h2><i class="fas fa-user"></i> Thông tin cá nhân</h2>
+                </div>
+                <div class="card-body">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user-circle fa-5x"></i>
+                    </div>
+                    
+                    <div class="profile-details">
+                        <div class="detail-item">
+                            <span class="label"><i class="fas fa-user"></i> Tên đăng nhập:</span>
+                            <span class="value">{{ current_user.username }}</span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="label"><i class="fas fa-envelope"></i> Email:</span>
+                            <span class="value">{{ current_user.email }}</span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="label"><i class="fas fa-calendar"></i> Ngày tham gia:</span>
+                            <span class="value">{{ current_user.created_at.strftime('%d/%m/%Y') }}</span>
+                        </div>
+                        
+                        {% if current_user.is_admin %}
+                        <div class="detail-item">
+                            <span class="label"><i class="fas fa-shield-alt"></i> Vai trò:</span>
+                            <span class="value badge badge-admin">Admin</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="stats-overview card">
+                <div class="card-header">
+                    <h2><i class="fas fa-chart-bar"></i> Thống kê tổng quan</h2>
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-value">{{ stats.total_sessions }}</div>
+                                <div class="stat-label">Tổng phiên đọc</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <div class="stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-value">{{ stats.completed_sessions }}</div>
+                                <div class="stat-label">Hoàn thành</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <div class="stat-icon">
+                                <i class="fas fa-font"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-value">{{ "{:,}".format(stats.total_words) }}</div>
+                                <div class="stat-label">Tổng từ đã đọc</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <div class="stat-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-value">{{ (stats.total_time // 60) }}</div>
+                                <div class="stat-label">Phút luyện tập</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <div class="stat-icon">
+                                <i class="fas fa-gauge-high"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-value">{{ stats.avg_speed }}</div>
+                                <div class="stat-label">Từ/phút TB</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <div class="stat-icon">
+                                <i class="fas fa-folder"></i>
+                            </div>
+                            <div class="stat-info">
+                                <div class="stat-value">{{ stats.total_documents }}</div>
+                                <div class="stat-label">Tài liệu</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="chart-section card">
+            <div class="card-header">
+                <h2><i class="fas fa-chart-line"></i> Tiến độ 7 ngày gần nhất</h2>
+            </div>
+            <div class="card-body">
+                <canvas id="progressChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Chart data from backend
+    const chartData = {{ chart_data | tojson }};
+    
+    // Create chart
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: [
+                {
+                    label: 'Số phiên đọc',
+                    data: chartData.sessions,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Số từ đã đọc',
+                    data: chartData.words,
+                    borderColor: '#f093fb',
+                    backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Số phiên'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Số từ'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

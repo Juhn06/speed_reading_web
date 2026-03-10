@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
+            <p>Quản lý và giám sát hệ thống</p>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="admin-stats-grid">
+            <div class="admin-stat-card">
+                <div class="stat-icon bg-primary">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Tổng người dùng</div>
+                    <div class="stat-value">{{ stats.total_users }}</div>
+                    <div class="stat-sub">+{{ stats.new_users }} tuần này</div>
+                </div>
+            </div>
+
+            <div class="admin-stat-card">
+                <div class="stat-icon bg-success">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Tổng phiên đọc</div>
+                    <div class="stat-value">{{ stats.total_sessions }}</div>
+                    <div class="stat-sub">{{ stats.sessions_today }} hôm nay</div>
+                </div>
+            </div>
+
+            <div class="admin-stat-card">
+                <div class="stat-icon bg-warning">
+                    <i class="fas fa-folder"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Tổng tài liệu</div>
+                    <div class="stat-value">{{ stats.total_documents }}</div>
+                </div>
+            </div>
+
+            <div class="admin-stat-card">
+                <div class="stat-icon bg-info">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Hoạt động</div>
+                    <div class="stat-value">{{ ((stats.sessions_today / stats.total_sessions * 100) if stats.total_sessions > 0 else 0)|round(1) }}%</div>
+                    <div class="stat-sub">Tỷ lệ hôm nay</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-content-grid">
+            <!-- Recent Users -->
+            <div class="admin-section card">
+                <div class="card-header">
+                    <h2><i class="fas fa-users"></i> Người dùng mới nhất</h2>
+                    <a href="{{ url_for('admin.users') }}" class="view-all">
+                        Xem tất cả <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Ngày tham gia</th>
+                                    <th>Phiên đọc</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in recent_users %}
+                                <tr>
+                                    <td>{{ user.id }}</td>
+                                    <td>
+                                        <i class="fas fa-user-circle"></i>
+                                        {{ user.username }}
+                                        {% if user.is_admin %}
+                                        <span class="badge badge-admin">Admin</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ user.get_total_sessions() }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Sessions -->
+            <div class="admin-section card">
+                <div class="card-header">
+                    <h2><i class="fas fa-history"></i> Phiên đọc gần đây</h2>
+                    <a href="{{ url_for('admin.sessions') }}" class="view-all">
+                        Xem tất cả <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>File</th>
+                                    <th>Tốc độ</th>
+                                    <th>Tiến độ</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in recent_sessions %}
+                                <tr>
+                                    <td>{{ session.user.username }}</td>
+                                    <td>{{ session.filename[:30] }}...</td>
+                                    <td>{{ session.speed }} từ/phút</td>
+                                    <td>{{ session.words_read }}/{{ session.total_words }}</td>
+                                    <td>
+                                        {% if session.completed %}
+                                        <span class="badge badge-success">
+                                            <i class="fas fa-check"></i> Hoàn thành
+                                        </span>
+                                        {% else %}
+                                        <span class="badge badge-warning">
+                                            <i class="fas fa-clock"></i> Chưa xong
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions card">
+            <div class="card-header">
+                <h2><i class="fas fa-bolt"></i> Thao tác nhanh</h2>
+            </div>
+            <div class="card-body">
+                <div class="actions-grid">
+                    <a href="{{ url_for('admin.users') }}" class="action-btn">
+                        <i class="fas fa-users"></i>
+                        <span>Quản lý Users</span>
+                    </a>
+                    <a href="{{ url_for('admin.documents') }}" class="action-btn">
+                        <i class="fas fa-folder"></i>
+                        <span>Quản lý Tài liệu</span>
+                    </a>
+                    <a href="{{ url_for('admin.sessions') }}" class="action-btn">
+                        <i class="fas fa-history"></i>
+                        <span>Quản lý Phiên đọc</span>
+                    </a>
+                    <a href="{{ url_for('user.dashboard') }}" class="action-btn">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>User Dashboard</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

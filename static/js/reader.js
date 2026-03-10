@@ -1,23 +1,44 @@
-// Lấy dữ liệu từ localStorage
+/**
+ * Reader Logic
+ * Xử lý logic đọc từng từ
+ */
+
+// Get data from localStorage
 let words = JSON.parse(localStorage.getItem('words')) || [];
 let speed = parseInt(localStorage.getItem('speed')) || 200;
+let filename = localStorage.getItem('filename') || 'Tài liệu';
+let docId = localStorage.getItem('doc_id');
+let totalWords = parseInt(localStorage.getItem('total_words')) || words.length;
 
+// State variables
 let currentIndex = 0;
 let intervalId = null;
+let timerInterval = null;
 let startTime = null;
 let isPaused = false;
 let isRunning = false;
-let timerInterval = null;
 let pausedTime = 0;
 
-// Hiển thị thông tin ban đầu
-document.getElementById('total').textContent = words.length;
-document.getElementById('currentSpeed').textContent = speed;
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    if (words.length === 0) {
+        document.getElementById('wordDisplay').textContent =
+            'Không có dữ liệu. Vui lòng quay lại trang chủ!';
+        return;
+    }
 
-// Tính khoảng thời gian giữa các từ
-let intervalTime = (60 / speed) * 1000;
+    // Display initial info
+    document.getElementById('total').textContent = totalWords;
+    document.getElementById('currentSpeed').textContent = speed;
 
-// Nút Play/Pause/Resume chung (toggle)
+    // Update button state
+    updateButton('play');
+});
+
+// Calculate interval time between words
+const intervalTime = (60 / speed) * 1000;
+
+// Toggle Play/Pause
 function togglePlayPause() {
     if (words.length === 0) {
         alert('⚠️ Không có dữ liệu. Vui lòng quay lại trang chủ!');
@@ -25,61 +46,56 @@ function togglePlayPause() {
     }
 
     if (isRunning) {
-        // Đang chạy → Pause
         pauseReading();
     } else {
-        // Đang dừng hoặc pause → Play/Resume
         startReading();
     }
 }
 
-// Bắt đầu đọc
+// Start reading
 function startReading() {
-    console.log('startReading called'); // Debug
-
-    // Nếu chưa bắt đầu lần nào
+    // First time start
     if (!startTime) {
         startTime = Date.now();
         startTimer();
     }
 
-    // Nếu đang pause, tiếp tục từ vị trí cũ
+    // Resume from pause
     if (isPaused) {
         isPaused = false;
         startTime = Date.now() - pausedTime;
     }
 
-    // Đánh dấu đang chạy
     isRunning = true;
 
-    // Clear interval cũ
+    // Clear old interval
     if (intervalId) {
         clearInterval(intervalId);
     }
 
+    // Start displaying words
     intervalId = setInterval(() => {
         if (currentIndex < words.length) {
             displayWord(words[currentIndex]);
             currentIndex++;
             updateProgress();
+            updatePercentage();
         } else {
             finishReading();
         }
     }, intervalTime);
 
-    // Cập nhật nút thành Pause
+    // Update button
     updateButton('pause');
 }
 
-// Hiển thị từ
+// Display word
 function displayWord(word) {
     document.getElementById('wordDisplay').textContent = word;
 }
 
-// Tạm dừng
+// Pause reading
 function pauseReading() {
-    console.log('pauseReading called'); // Debug
-
     if (intervalId) {
         clearInterval(intervalId);
         intervalId = null;
@@ -88,21 +104,22 @@ function pauseReading() {
     isRunning = false;
     isPaused = true;
 
-    // Lưu thời gian đã chạy
+    // Save elapsed time
     if (startTime) {
         pausedTime = Date.now() - startTime;
     }
 
-    // Cập nhật nút thành Resume
+    // Update button
     updateButton('resume');
 }
 
-// Reset
+// Reset reading
 function resetReading() {
-    console.log('resetReading called'); // Debug
-
+    // Clear intervals
     clearInterval(intervalId);
     clearInterval(timerInterval);
+
+    // Reset state
     intervalId = null;
     timerInterval = null;
     currentIndex = 0;
@@ -111,20 +128,28 @@ function resetReading() {
     isRunning = false;
     pausedTime = 0;
 
-    document.getElementById('wordDisplay').textContent = 'Nhấn nút Play để bắt đầu';
+    // Reset display
+    document.getElementById('wordDisplay').textContent = 'Nhấn Play để bắt đầu';
     document.getElementById('timer').textContent = '00:00';
     document.getElementById('progress').textContent = '0';
+    document.getElementById('percentage').textContent = '0';
 
-    // Cập nhật nút về Play
+    // Update button
     updateButton('play');
 }
 
-// Cập nhật tiến độ
+// Update progress
 function updateProgress() {
     document.getElementById('progress').textContent = currentIndex;
 }
 
-// Cập nhật thời gian
+// Update percentage
+function updatePercentage() {
+    const percent = Math.round((currentIndex / totalWords) * 100);
+    document.getElementById('percentage').textContent = percent;
+}
+
+// Start timer
 function startTimer() {
     if (timerInterval) {
         clearInterval(timerInterval);
@@ -132,9 +157,9 @@ function startTimer() {
 
     timerInterval = setInterval(() => {
         if (isRunning && startTime) {
-            let elapsed = Math.floor((Date.now() - startTime) / 1000);
-            let minutes = Math.floor(elapsed / 60);
-            let seconds = elapsed % 60;
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
 
             document.getElementById('timer').textContent =
                 `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -142,51 +167,72 @@ function startTimer() {
     }, 1000);
 }
 
-// Hoàn thành
-function finishReading() {
+// Finish reading
+async function finishReading() {
     clearInterval(intervalId);
     clearInterval(timerInterval);
 
-    let totalTime = Math.floor((Date.now() - startTime) / 1000);
-    let minutes = Math.floor(totalTime / 60);
-    let seconds = totalTime % 60;
+    const totalTime = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = Math.floor(totalTime / 60);
+    const seconds = totalTime % 60;
 
-    alert(`🎉 Hoàn thành!\n\n` +
-          `📚 Tổng: ${words.length} từ\n` +
-          `⏱️ Thời gian: ${minutes}:${seconds.toString().padStart(2, '0')}\n` +
-          `🚀 Tốc độ: ${speed} từ/phút`);
+    // Save session to backend
+    try {
+        await API.saveSession({
+            doc_id: docId,
+            filename: filename,
+            total_words: totalWords,
+            words_read: currentIndex,
+            speed: speed,
+            duration: totalTime,
+            completed: currentIndex === totalWords
+        });
+    } catch (error) {
+        console.error('Error saving session:', error);
+    }
 
-    resetReading();
+    // Show completion message
+    alert(
+        `🎉 Hoàn thành!\n\n` +
+        `📚 Tổng: ${totalWords} từ\n` +
+        `📖 Đã đọc: ${currentIndex} từ\n` +
+        `⏱️ Thời gian: ${minutes}:${seconds.toString().padStart(2, '0')}\n` +
+        `🚀 Tốc độ: ${speed} từ/phút\n` +
+        `✅ Hoàn thành: ${Math.round((currentIndex / totalWords) * 100)}%`
+    );
+
+    // Reset or go back
+    if (confirm('Bạn muốn đọc lại tài liệu này?')) {
+        resetReading();
+    } else {
+        goBack();
+    }
 }
 
-// Cập nhật text và icon của nút
+// Update button state
 function updateButton(state) {
     const btn = document.getElementById('playPauseBtn');
 
     if (!btn) {
-        console.error('Button playPauseBtn not found!');
+        console.error('Button not found!');
         return;
     }
 
     if (state === 'play') {
-        btn.textContent = '▶️ Play';
-        btn.style.backgroundColor = '#667eea';
+        btn.innerHTML = '<i class="fas fa-play"></i><span>Play</span>';
+        btn.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
     } else if (state === 'pause') {
-        btn.textContent = '⏸️ Pause';
-        btn.style.backgroundColor = '#f59e0b';
+        btn.innerHTML = '<i class="fas fa-pause"></i><span>Pause</span>';
+        btn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
     } else if (state === 'resume') {
-        btn.textContent = '▶️ Resume';
-        btn.style.backgroundColor = '#10b981';
+        btn.innerHTML = '<i class="fas fa-play"></i><span>Resume</span>';
+        btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
     }
-
-    console.log('Button updated to:', state); // Debug
 }
 
-// Quay lại trang chủ
+// Go back to dashboard
 function goBack() {
-    window.location.href = '/';
-}
-
-// Khởi tạo nút khi load trang
-console.log('Script loaded, words count:', words.length); // Debug
-updateButton('play');
+    if (confirm('Bạn chắc chắn muốn thoát? Tiến độ hiện tại sẽ được lưu.')) {
+        // Save current progress before leaving
+        if (startTime && currentIndex > 0) {
+            const totalTime = Math.floor((Date.now() - startTime) / 100

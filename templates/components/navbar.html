@@ -1,0 +1,70 @@
+<nav class="navbar">
+    <div class="container">
+        <div class="navbar-content">
+            <!-- Logo -->
+            <a href="{{ url_for('main.index') }}" class="navbar-brand">
+                <i class="fas fa-book-reader"></i>
+                <span>Speed Reading</span>
+            </a>
+
+            <!-- Menu -->
+            <div class="navbar-menu">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('user.dashboard') }}" class="nav-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('user.history') }}" class="nav-link">
+                        <i class="fas fa-history"></i>
+                        <span>Lịch sử</span>
+                    </a>
+                    <a href="{{ url_for('user.documents') }}" class="nav-link">
+                        <i class="fas fa-folder-open"></i>
+                        <span>Tài liệu</span>
+                    </a>
+
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('admin.dashboard') }}" class="nav-link admin-link">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Admin</span>
+                    </a>
+                    {% endif %}
+
+                    <!-- User Dropdown -->
+                    <div class="dropdown">
+                        <button class="dropdown-toggle">
+                            <i class="fas fa-user-circle"></i>
+                            <span>{{ current_user.username }}</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="{{ url_for('user.profile') }}" class="dropdown-item">
+                                <i class="fas fa-user"></i> Trang cá nhân
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="{{ url_for('auth.logout') }}" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="nav-link">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Đăng nhập</span>
+                    </a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Đăng ký</span>
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Mobile Toggle -->
+            <button class="navbar-toggle" id="navbarToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </div>
+</nav>

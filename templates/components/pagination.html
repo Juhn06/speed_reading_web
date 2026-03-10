@@ -1,0 +1,40 @@
+{% if pagination.pages > 1 %}
+<div class="pagination">
+    <!-- Previous -->
+    {% if pagination.has_prev %}
+        <a href="{{ url_for(request.endpoint, page=pagination.prev_num) }}" class="page-link">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+    {% else %}
+        <span class="page-link disabled">
+            <i class="fas fa-chevron-left"></i>
+        </span>
+    {% endif %}
+    
+    <!-- Pages -->
+    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+        {% if page_num %}
+            {% if page_num == pagination.page %}
+                <span class="page-link active">{{ page_num }}</span>
+            {% else %}
+                <a href="{{ url_for(request.endpoint, page=page_num) }}" class="page-link">
+                    {{ page_num }}
+                </a>
+            {% endif %}
+        {% else %}
+            <span class="page-link disabled">...</span>
+        {% endif %}
+    {% endfor %}
+    
+    <!-- Next -->
+    {% if pagination.has_next %}
+        <a href="{{ url_for(request.endpoint, page=pagination.next_num) }}" class="page-link">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+    {% else %}
+        <span class="page-link disabled">
+            <i class="fas fa-chevron-right"></i>
+        </span>
+    {% endif %}
+</div>
+{% endif %}

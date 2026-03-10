@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Lịch sử đọc - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="history-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-history"></i> Lịch sử đọc</h1>
+            <p>Xem lại tất cả các phiên đọc của bạn</p>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section card">
+            <div class="card-body">
+                <div class="filter-grid">
+                    <div class="filter-item">
+                        <label><i class="fas fa-calendar"></i> Khoảng thời gian:</label>
+                        <select class="form-control" id="dateFilter">
+                            <option value="all">Tất cả</option>
+                            <option value="today">Hôm nay</option>
+                            <option value="week">Tuần này</option>
+                            <option value="month">Tháng này</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label><i class="fas fa-filter"></i> Trạng thái:</label>
+                        <select class="form-control" id="statusFilter">
+                            <option value="all">Tất cả</option>
+                            <option value="completed">Hoàn thành</option>
+                            <option value="incomplete">Chưa hoàn thành</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-item">
+                        <label><i class="fas fa-sort"></i> Sắp xếp:</label>
+                        <select class="form-control" id="sortFilter">
+                            <option value="newest">Mới nhất</option>
+                            <option value="oldest">Cũ nhất</option>
+                            <option value="speed">Tốc độ cao nhất</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sessions List -->
+        {% if pagination.items %}
+        <div class="sessions-section">
+            {% for session in pagination.items %}
+            <div class="session-card card">
+                <div class="session-header">
+                    <div class="session-title">
+                        <i class="fas fa-file-alt"></i>
+                        <h3>{{ session.filename }}</h3>
+                    </div>
+                    <div class="session-status">
+                        {% if session.completed %}
+                        <span class="badge badge-success">
+                            <i class="fas fa-check-circle"></i> Hoàn thành
+                        </span>
+                        {% else %}
+                        <span class="badge badge-warning">
+                            <i class="fas fa-clock"></i> Chưa hoàn thành
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="session-body">
+                    <div class="session-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-calendar"></i>
+                            <div>
+                                <div class="stat-label">Ngày đọc</div>
+                                <div class="stat-value">{{ session.format_created_at() }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <i class="fas fa-gauge-high"></i>
+                            <div>
+                                <div class="stat-label">Tốc độ</div>
+                                <div class="stat-value">{{ session.speed }} từ/phút</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <div class="stat-label">Thời gian</div>
+                                <div class="stat-value">{{ session.format_duration() }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <i class="fas fa-list-ol"></i>
+                            <div>
+                                <div class="stat-label">Tiến độ</div>
+                                <div class="stat-value">{{ session.words_read }}/{{ session.total_words }} từ</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="progress-section">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: {{ session.get_completion_rate() }}%"></div>
+                        </div>
+                        <div class="progress-text">{{ session.get_completion_rate() }}%</div>
+                    </div>
+                </div>
+                
+                <div class="session-footer">
+                    {% if session.document_id %}
+                    <button class="btn btn-sm btn-primary" onclick="readAgain({{ session.document_id }})">
+                        <i class="fas fa-redo"></i> Đọc lại
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-sm btn-danger" onclick="deleteSession({{ session.id }})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% include 'components/pagination.html' %}
+
+        {% else %}
+        <div class="empty-state card">
+            <div class="card-body">
+                <i class="fas fa-inbox fa-4x"></i>
+                <h3>Chưa có lịch sử đọc</h3>
+                <p>Bắt đầu upload tài liệu và luyện đọc ngay!</p>
+                <a href="{{ url_for('user.dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Upload tài liệu
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function readAgain(docId) {
+        window.location.href = `/reading/load-document/${docId}`;
+    }
+
+    async function deleteSession(sessionId) {
+        if (!confirm('Bạn chắc chắn muốn xóa phiên đọc này?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/user/delete-session/${sessionId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert(data.error, 'error');
+            }
+        } catch (error) {
+            showAlert('Lỗi xóa phiên đọc: ' + error.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

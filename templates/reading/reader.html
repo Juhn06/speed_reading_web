@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Đang đọc - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #1a1a1a;
+        color: #fff;
+        overflow: hidden;
+    }
+    .navbar, .footer {
+        display: none;
+    }
+    .main-content {
+        padding: 0;
+        min-height: 100vh;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reader-page">
+    <div class="reader-container">
+        <!-- Word Display -->
+        <div class="word-display" id="wordDisplay">
+            Nhấn Play để bắt đầu
+        </div>
+
+        <!-- Info Bar -->
+        <div class="info-bar">
+            <div class="info-item">
+                <i class="fas fa-clock"></i>
+                <span id="timer">00:00</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-list-ol"></i>
+                <span><span id="progress">0</span>/<span id="total">0</span> từ</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-gauge-high"></i>
+                <span><span id="currentSpeed">0</span> từ/phút</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-percentage"></i>
+                <span><span id="percentage">0</span>%</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="reader-controls">
+            <button class="btn-control btn-play-pause" id="playPauseBtn" onclick="togglePlayPause()">
+                <i class="fas fa-play"></i>
+                <span>Play</span>
+            </button>
+            <button class="btn-control" onclick="resetReading()">
+                <i class="fas fa-redo"></i>
+                <span>Reset</span>
+            </button>
+            <button class="btn-control" onclick="goBack()">
+                <i class="fas fa-home"></i>
+                <span>Trang chủ</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/reader.js') }}"></script>
+{% endblock %}

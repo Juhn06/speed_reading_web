@@ -1,0 +1,38 @@
+<footer class="footer">
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-info">
+                <h3><i class="fas fa-book-reader"></i> Speed Reading</h3>
+                <p>Hệ thống luyện đọc nhanh hiệu quả</p>
+            </div>
+
+            <div class="footer-links">
+                <h4>Liên kết</h4>
+                <ul>
+                    <li><a href="{{ url_for('main.index') }}">Trang chủ</a></li>
+                    <li><a href="{{ url_for('main.about') }}">Giới thiệu</a></li>
+                    {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('user.dashboard') }}">Dashboard</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <div class="footer-contact">
+                <h4>Liên hệ</h4>
+                <p><i class="fas fa-envelope"></i> contact@speedreading.com</p>
+                <p><i class="fas fa-phone"></i> (+84) 123-456-789</p>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2024 Speed Reading System. All rights reserved.</p>
+            <p>Developed by
+                {% if current_user.is_authenticated %}
+                    {{ current_user.username }}
+                {% else %}
+                    Your Name
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</footer>

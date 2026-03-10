@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý Tài liệu - Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-documents-page">
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-folder-open"></i> Quản lý tài liệu</h1>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại Dashboard
+            </a>
+        </div>
+
+        <!-- Stats Summary -->
+        <div class="stats-summary">
+            <div class="stat-box">
+                <i class="fas fa-folder"></i>
+                <div>
+                    <div class="stat-number">{{ pagination.total }}</div>
+                    <div class="stat-label">Tổng tài liệu</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-file-pdf"></i>
+                <div>
+                    <div class="stat-number">{{ pagination.items | selectattr('file_type', 'equalto', 'pdf') | list | length }}</div>
+                    <div class="stat-label">PDF</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-file-word"></i>
+                <div>
+                    <div class="stat-number">{{ pagination.items | selectattr('file_type', 'equalto', 'docx') | list | length }}</div>
+                    <div class="stat-label">DOCX</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <i class="fas fa-file-alt"></i>
+                <div>
+                    <div class="stat-number">{{ pagination.items | selectattr('file_type', 'equalto', 'txt') | list | length }}</div>
+                    <div class="stat-label">TXT</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter -->
+        <div class="admin-toolbar card">
+            <div class="card-body">
+                <div class="toolbar-grid">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text"
+                               id="searchInput"
+                               placeholder="Tìm theo tên file..."
+                               class="form-control">
+                    </div>
+
+                    <select class="form-control" id="typeFilter">
+                        <option value="all">Tất cả loại file</option>
+                        <option value="pdf">PDF</option>
+                        <option value="docx">DOCX</option>
+                        <option value="txt">TXT</option>
+                    </select>
+
+                    <select class="form-control" id="sortBy">
+                        <option value="newest">Mới nhất</option>
+                        <option value="oldest">Cũ nhất</option>
+                        <option value="most_read">Đọc nhiều nhất</option>
+                        <option value="largest">Nhiều từ nhất</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents Table -->
+        <div class="admin-table-section card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>File</th>
+                                <th>Người upload</th>
+                                <th>Loại</th>
+                                <th>Số từ</th>
+                                <th>Ngày upload</th>
+                                <th>Lượt đọc</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in pagination.items %}
+                            <tr>
+                                <td>{{ doc.id }}</td>
+                                <td>
+                                    <div class="file-info">
+                                        {% if doc.file_type == 'pdf' %}
+                                        <i class="fas fa-file-pdf text-danger"></i>
+                                        {% elif doc.file_type == 'docx' %}
+                                        <i class="fas fa-file-word text-primary"></i>
+                                        {% else %}
+                                        <i class="fas fa-file-alt text-secondary"></i>
+                                        {% endif %}
+                                        <span class="file-name" title="{{ doc.original_filename }}">
+                                            {{ doc.original_filename[:40] }}{{ '...' if doc.original_filename|length > 40 else '' }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <i class="fas fa-user"></i>
+                                    {{ doc.user.username }}
+                                </td>
+                                <td>
+                                    <span class="badge badge-{{ 'danger' if doc.file_type == 'pdf' else 'primary' if doc.file_type == 'docx' else 'secondary' }}">
+                                        {{ doc.file_type.upper() }}
+                                    </span>
+                                </td>
+                                <td>{{ "{:,}".format(doc.word_count) }}</td>
+                                <td>{{ doc.created_at.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ doc.times_read() }} lần</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-info"
+                                                onclick="viewDocument({{ doc.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger"
+                                                onclick="deleteDocument({{ doc.id }}, '{{ doc.original_filename }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% include 'components/pagination.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function viewDocument(docId) {
+        alert(`Xem chi tiết tài liệu ID: ${docId}`);
+    }
+
+    async function deleteDocument(docId, filename) {
+        if (!confirm(`Bạn chắc chắn muốn xóa tài liệu "${filename}"?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/user/delete-document/${docId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showAlert(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert(data.error, 'error');
+            }
+        } catch (error) {
+            showAlert('Lỗi xóa tài liệu: ' + error.message, 'error');
+        }
+    }
+</script>
+{% endblock %}
