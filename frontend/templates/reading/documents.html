@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Tài liệu của tôi - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+    {% include 'components/sidebar.html' %}
+    <div class="app-main">
+        <div class="documents-page">
+            <div class="container">
+        
+        <div class="page-header">
+            <h1><i class="fas fa-folder-open"></i> Tài liệu của tôi</h1>
+            <p>Quản lý và đọc lại các tài liệu đã lưu</p>
+        </div>
+
+        
+        {% if documents %}
+        <div class="documents-grid">
+            {% for doc in documents %}
+            <div class="document-card card">
+                <div class="doc-icon-large {% if doc.file_type == 'pdf' %}doc-icon-pdf{% elif doc.file_type == 'docx' %}doc-icon-docx{% else %}doc-icon-default{% endif %}">
+                    {% if doc.file_type == 'pdf' %}
+                        <i class="fas fa-file-pdf"></i>
+                    {% elif doc.file_type == 'docx' %}
+                        <i class="fas fa-file-word"></i>
+                    {% else %}
+                        <i class="fas fa-file-alt"></i>
+                    {% endif %}
+                </div>
+                
+                <div class="doc-content">
+                    <div class="doc-header">
+                        <h3 class="doc-title">{{ doc.original_filename }}</h3>
+                        <button class="doc-star-btn {% if doc.is_starred %}active{% endif %}"
+                                onclick="toggleStar({{ doc.id }}, this)"
+                                title="Danh dau sao">
+                            <i class="fas fa-star"></i>
+                        </button>
+                    </div>
+
+                    <div class="doc-stats-table">
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-font"></i> Số từ trong file</div>
+                            <div class="stats-value">{{ doc.word_count }} từ</div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-calendar"></i> Ngày tạo</div>
+                            <div class="stats-value">{{ doc.created_at | local_date(doc.tz_offset, doc.tz_name) }}</div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stats-label"><i class="fas fa-redo"></i> Số lần đọc</div>
+                            <div class="stats-value">{{ doc.times_read() }} lần</div>
+                        </div>
+                        <div class="stats-row stats-row-format">
+                            <div class="stats-label">Định dạng</div>
+                            <div class="stats-value stats-value-format">
+                                <span>{{ doc.file_type|upper }}</span>
+                                {% if doc.file_type == 'pdf' %}
+                                    <i class="fas fa-file-pdf"></i>
+                                {% elif doc.file_type == 'docx' %}
+                                    <i class="fas fa-file-word"></i>
+                                {% else %}
+                                    <i class="fas fa-file-alt"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="doc-actions">
+                    <button class="btn btn-primary" onclick="loadDocument({{ doc.id }})">
+                        <i class="fas fa-book-reader"></i> Đọc ngay
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteDocument({{ doc.id }})">
+                        <i class="fas fa-trash"></i> Xóa
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <div class="empty-state card">
+            <div class="card-body">
+                <i class="fas fa-folder-open fa-4x"></i>
+                <h3>Chưa có tài liệu nào</h3>
+                <p>Upload tài liệu mới để bắt đầu luyện đọc!</p>
+                <a href="{{ url_for('reading.train') }}" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Upload tài liệu
+                </a>
+            </div>
+        </div>
+        {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadDocument(docId) {
+        try {
+            showLoading('Đang tải tài liệu...');
+
+            const response = await fetch(`/reading/load-document/${docId}`);
+            const data = await response.json();
+
+            hideLoading();
+
+            if (data.error) {
+                showAlert(data.error, 'error');
+                return;
+            }
+
+            // save loaded words and meta, but do not set speed yet
+            localStorage.setItem('words', JSON.stringify(data.words));
+            localStorage.setItem('filename', data.filename);
+            localStorage.setItem('doc_id', data.doc_id);
+            localStorage.setItem('total_words', data.total);
+
+            // Navigate to reader and instruct it to show the completion-style speed chooser
+            localStorage.setItem('pendingShowCompletionSpeedChooser', '1');
+            window.location.href = '/reading/reader';
+
+        } catch (error) {
+            hideLoading();
+            showAlert('Lỗi tải tài liệu', 'error');
+        }
+    }
+
+    function showSpeedChooser(initialSpeed, onConfirm) {
+        // create modal container
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.inset = '0';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.background = 'rgba(6,10,22,0.6)';
+        modal.style.zIndex = 20000;
+
+        const card = document.createElement('div');
+        card.style.background = '#fff';
+        card.style.padding = '1.25rem 1.5rem';
+        card.style.borderRadius = '12px';
+        card.style.minWidth = '420px';
+        card.style.maxWidth = '90%';
+        card.style.textAlign = 'center';
+
+        const title = document.createElement('div');
+        title.style.fontSize = '1.1rem';
+        title.style.fontWeight = '700';
+        title.style.marginBottom = '0.5rem';
+        title.textContent = 'Chọn tốc độ đọc';
+
+        const slider = document.createElement('input');
+            slider.type = 'range';
+            slider.min = '100';
+            slider.max = '600';
+        slider.step = '1';
+        slider.value = String(initialSpeed || 200);
+        slider.style.width = '100%';
+
+        const value = document.createElement('div');
+        value.style.marginTop = '0.5rem';
+        value.style.fontWeight = '700';
+        value.style.color = '#4f46e5';
+        value.textContent = slider.value + ' từ/phút';
+        // no textual range label here (kept minimal)
+
+        // presets (label + numeric)
+        const presets = [ {v:120, t:'Chậm'}, {v:200, t:'Vừa'}, {v:350, t:'Nhanh'}, {v:600, t:'Rất nhanh'} ];
+        const presetsRow = document.createElement('div');
+        presetsRow.style.display = 'flex';
+        presetsRow.style.justifyContent = 'center';
+        presetsRow.style.gap = '1rem';
+        presetsRow.style.marginTop = '0.6rem';
+
+        function makePreset(p) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'preset';
+            btn.setAttribute('data-value', String(p.v));
+            btn.setAttribute('aria-pressed','false');
+            btn.style.background = 'none';
+            btn.style.border = 'none';
+            btn.style.cursor = 'pointer';
+            btn.style.display = 'flex';
+            btn.style.flexDirection = 'column';
+            btn.style.alignItems = 'center';
+
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            dot.style.width = '12px';
+            dot.style.height = '12px';
+            dot.style.borderRadius = '50%';
+            dot.style.background = '#cbd5e1';
+            dot.style.display = 'block';
+            dot.style.marginBottom = '6px';
+
+            const lbl = document.createElement('small');
+            lbl.style.color = '#475569';
+            lbl.textContent = p.t;
+
+            btn.appendChild(dot);
+            btn.appendChild(lbl);
+
+            btn.addEventListener('click', () => {
+                slider.value = String(p.v);
+                value.textContent = slider.value + ' từ/phút';
+                updateActivePreset();
+            });
+
+            return btn;
+        }
+
+        presets.forEach(p => presetsRow.appendChild(makePreset(p)));
+
+        function updateActivePreset() {
+            const all = presetsRow.querySelectorAll('.preset');
+            const cur = parseInt(slider.value, 10);
+            let best = null; let bestDiff = Infinity;
+            all.forEach(n => {
+                const v = parseInt(n.getAttribute('data-value'),10)||0;
+                const diff = Math.abs(v-cur);
+                if (diff < bestDiff) { bestDiff = diff; best = n; }
+            });
+            all.forEach(n => {
+                const dot = n.querySelector('.dot');
+                if (n === best) { n.setAttribute('aria-pressed','true'); if (dot) dot.style.background = 'linear-gradient(135deg,#667eea,#764ba2)'; }
+                else { n.setAttribute('aria-pressed','false'); if (dot) dot.style.background = '#cbd5e1'; }
+            });
+            // no textual range label update
+        }
+
+        slider.addEventListener('input', () => { value.textContent = slider.value + ' từ/phút'; updateActivePreset(); });
+
+        const btnRow = document.createElement('div');
+        btnRow.style.marginTop = '0.75rem';
+        btnRow.style.display = 'flex';
+        btnRow.style.justifyContent = 'center';
+        btnRow.style.gap = '0.75rem';
+
+        const startBtn = document.createElement('button');
+        startBtn.className = 'btn btn-primary';
+        startBtn.textContent = 'Bắt đầu';
+        startBtn.addEventListener('click', () => {
+            const chosen = parseInt(slider.value, 10) || initialSpeed;
+            document.body.removeChild(modal);
+            if (typeof onConfirm === 'function') onConfirm(chosen);
+        });
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-outline';
+        cancelBtn.textContent = 'Hủy';
+        cancelBtn.addEventListener('click', () => { document.body.removeChild(modal); });
+
+        btnRow.appendChild(startBtn);
+        btnRow.appendChild(cancelBtn);
+
+        card.appendChild(title);
+        card.appendChild(slider);
+        card.appendChild(value);
+        card.appendChild(presetsRow);
+        card.appendChild(btnRow);
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+        // focus and initial active preset
+        slider.focus();
+        updateActivePreset();
+    }
+
+    async function toggleStar(docId, btn) {
+        try {
+            const response = await fetch(`/user/document/${docId}/star`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.error) {
+                showAlert(data.error, 'error');
+                return;
+            }
+
+            const allButtons = document.querySelectorAll('.doc-star-btn.active');
+            allButtons.forEach((button) => button.classList.remove('active'));
+
+            if (data.starred) {
+                btn.classList.add('active');
+            }
+        } catch (error) {
+            showAlert('Loi danh dau sao', 'error');
+        }
+    }
+    </script>
+{% endblock %}

@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Luyện đọc - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+    {% include 'components/sidebar.html' %}
+    <div class="app-main">
+        <div class="train-page">
+            <div class="container">
+                <div class="page-header">
+                    <h1><i class="fas fa-bolt"></i> Luyện đọc</h1>
+                    <p>Upload tài liệu để bắt đầu luyện đọc</p>
+                </div>
+
+                <div class="upload-section card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-upload"></i> Upload tài liệu mới</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                            </div>
+                            <p class="upload-text">Kéo thả file vào đây hoặc click để chọn</p>
+                            <p class="upload-hint">Hỗ trợ: .txt, .docx, .pdf (Tối đa 16MB)</p>
+                            <input type="file"
+                                   id="fileInput"
+                                   accept=".txt,.docx,.pdf"
+                                   style="display: none;">
+                            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-folder-open"></i> Chọn file
+                            </button>
+                        </div>
+
+                        <div class="speed-selection" id="speedSelection" style="display: none;">
+                            <h3>Chọn tốc độ đọc</h3>
+                            <div class="speed-slider">
+                                        <input type="range"
+                                                    id="speedSlider"
+                                                    min="100"
+                                                    max="600"
+                                                    value="200"
+                                                    step="1">
+                                        <div class="speed-value">
+                                            <span id="speedValue">200</span> từ/phút
+                                        </div>
+                                        
+                                <div class="speed-presets" id="speedPresets" style="margin-top:1rem; display:flex; gap:1rem; justify-content:center; align-items:center;">
+                                    <button type="button" class="preset" data-value="120" aria-pressed="false" title="Chậm" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;">
+                                        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#cbd5e1;display:block;margin-bottom:6px;"></span>
+                                        <small style="color:#475569;">Chậm</small>
+                                    </button>
+                                    <button type="button" class="preset" data-value="200" aria-pressed="false" title="Vừa" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;">
+                                        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#cbd5e1;display:block;margin-bottom:6px;"></span>
+                                        <small style="color:#475569;">Vừa</small>
+                                    </button>
+                                    <button type="button" class="preset" data-value="350" aria-pressed="false" title="Nhanh" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;">
+                                        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#cbd5e1;display:block;margin-bottom:6px;"></span>
+                                        <small style="color:#475569;">Nhanh</small>
+                                    </button>
+                                    <button type="button" class="preset" data-value="600" aria-pressed="false" title="Rất nhanh" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;">
+                                        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#cbd5e1;display:block;margin-bottom:6px;"></span>
+                                        <small style="color:#475569;">Rất nhanh</small>
+                                    </button>
+                                </div>
+                            </div>
+                            <button class="btn btn-success btn-lg" id="startReadingBtn">
+                                <i class="fas fa-play"></i> Bắt đầu đọc
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let uploadedData = null;
+
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const speedSelection = document.getElementById('speedSelection');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+
+    speedSlider.oninput = function() {
+        speedValue.textContent = this.value;
+        updatePresetActive(parseInt(this.value, 10));
+    };
+
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        await uploadFile(file);
+    });
+
+    async function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            showLoading('Đang xử lý file...');
+
+            const response = await fetch('/reading/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            hideLoading();
+
+            if (data.error) {
+                showAlert(data.error, 'error');
+                return;
+            }
+
+            uploadedData = data; // contains storage_rel and metadata; not yet persisted as Document
+            showAlert(`✅ Đã tải lên ${data.total} từ từ "${data.filename}" (chưa lưu)`, 'success');
+
+            uploadArea.style.display = 'none';
+            speedSelection.style.display = 'block';
+
+        } catch (error) {
+            hideLoading();
+            showAlert('Lỗi upload file: ' + error.message, 'error');
+        }
+    }
+
+    document.getElementById('startReadingBtn').addEventListener('click', async () => {
+        const speed = speedSlider.value;
+        if (!uploadedData || !uploadedData.storage_rel) {
+            showAlert('Không có tài liệu để bắt đầu đọc.', 'error');
+            return;
+        }
+
+        showLoading('Đang lưu tài liệu...');
+        try {
+            const resp = await fetch('/reading/commit-upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    storage_rel: uploadedData.storage_rel,
+                    filename: uploadedData.filename,
+                    file_hash: uploadedData.file_hash,
+                    file_mime: uploadedData.file_mime
+                })
+            });
+            const result = await resp.json();
+            hideLoading();
+            if (result.error) {
+                showAlert(result.error, 'error');
+                return;
+            }
+
+            // persist reading state and navigate
+            localStorage.setItem('words', JSON.stringify(result.words || uploadedData.words));
+            localStorage.setItem('speed', speed);
+            localStorage.setItem('filename', result.filename || uploadedData.filename);
+            localStorage.setItem('doc_id', result.doc_id);
+            localStorage.setItem('total_words', result.total || uploadedData.total);
+
+            window.location.href = '/reading/reader';
+        } catch (err) {
+            hideLoading();
+            showAlert('Lỗi khi lưu tài liệu: ' + err.message, 'error');
+        }
+    });
+
+    // preset buttons behavior
+    function updatePresetActive(currentValue) {
+        const presets = document.querySelectorAll('#speedPresets .preset');
+        if (!presets) return;
+        let closest = null;
+        let bestDiff = Infinity;
+        presets.forEach(p => {
+            const val = parseInt(p.getAttribute('data-value'), 10);
+            const diff = Math.abs(val - currentValue);
+            if (diff < bestDiff) { bestDiff = diff; closest = p; }
+        });
+        presets.forEach(p => {
+            const dot = p.querySelector('.dot');
+            if (p === closest) {
+                p.classList.add('active');
+                p.setAttribute('aria-pressed','true');
+                if (dot) dot.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
+            } else {
+                p.classList.remove('active');
+                p.setAttribute('aria-pressed','false');
+                if (dot) dot.style.background = '#cbd5e1';
+            }
+        });
+        // no textual range label here
+    }
+
+    // bind clicks to presets
+    document.addEventListener('DOMContentLoaded', () => {
+        const presets = document.querySelectorAll('#speedPresets .preset');
+        presets.forEach(p => {
+            p.addEventListener('click', () => {
+                const val = parseInt(p.getAttribute('data-value'), 10);
+                speedSlider.value = val;
+                speedValue.textContent = val;
+                updatePresetActive(val);
+            });
+        });
+        // initial active preset
+        updatePresetActive(parseInt(speedSlider.value, 10));
+    });
+</script>
+{% endblock %}

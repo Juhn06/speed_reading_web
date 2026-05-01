@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Speed Reading{% endblock %}</title>
+
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
+    {% block extra_css %}{% endblock %}
+
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% set show_sidebar_layout = current_user.is_authenticated
+    and request.endpoint
+    and (request.endpoint.startswith('user.') or request.endpoint.startswith('reading.')) %}
+</head>
+<body class="{% if show_sidebar_layout %}app-body{% endif %}">
+
+    {% if not show_sidebar_layout %}
+        {% include 'components/navbar.html' %}
+    {% endif %}
+
+    
+    {% include 'components/flash_messages.html' %}
+
+    
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include 'components/footer.html' %}
+
+    <script>
+        (function() {
+            try {
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                const offsetMinutes = -new Date().getTimezoneOffset();
+                const match = document.cookie.match(/(?:^|; )tz=([^;]+)/);
+                const current = match ? decodeURIComponent(match[1]) : '';
+                const offsetMatch = document.cookie.match(/(?:^|; )tz_offset=([^;]+)/);
+                const currentOffset = offsetMatch ? decodeURIComponent(offsetMatch[1]) : '';
+
+                if (current !== tz || String(offsetMinutes) !== currentOffset) {
+                    if (tz) {
+                        document.cookie = `tz=${encodeURIComponent(tz)}; path=/; max-age=31536000`;
+                    }
+                    document.cookie = `tz_offset=${encodeURIComponent(offsetMinutes)}; path=/; max-age=31536000`;
+
+                    const payload = { tz: tz || null, offset: offsetMinutes };
+                    fetch('/timezone', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }).catch(() => {
+                    }).finally(() => {
+                        if (!sessionStorage.getItem('tz_reloaded')) {
+                            sessionStorage.setItem('tz_reloaded', '1');
+                            window.location.reload();
+                        }
+                    });
+                } else {
+                    sessionStorage.removeItem('tz_reloaded');
+                }
+            } catch (e) {
+            }
+        })();
+    </script>
+
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    {% if request.endpoint and request.endpoint.startswith('admin.') %}
+    <script src="{{ url_for('static', filename='js/admin.js', v='20260311f') }}"></script>
+    {% endif %}
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

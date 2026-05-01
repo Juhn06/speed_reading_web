@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Giới thiệu - Speed Reading{% endblock %}
+
+{% block content %}
+<div class="landing-page">
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-grid">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        <span class="gradient-text">Giới thiệu</span>
+                        <br>Speed Reading
+                    </h1>
+                    <p class="hero-description">
+                        Speed Reading là web hỗ trợ luyện đọc nhanh, theo dõi tốc độ và tiến độ.
+                        Gọn nhẹ, dễ dùng cho học tập.
+                    </p>
+                    <div class="hero-buttons">
+                        {% if current_user.is_authenticated %}
+                            <a href="{{ url_for('user.dashboard') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-rocket"></i> Vào Dashboard
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-user-plus"></i> Đăng ký miễn phí
+                            </a>
+                            <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="hero-image">
+                    <div class="floating-card">
+                        <i class="fas fa-book-reader fa-5x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Góc nhìn kỹ thuật</h2>
+                <p class="section-description">Xử lý, thống kê, dễ mở rộng.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3>Xử lý văn bản</h3>
+                    <p>Tách từ, chuẩn hóa để đọc ổn định.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Thống kê</h3>
+                    <p>Lưu tiến độ, số từ, tốc độ.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Bảo mật</h3>
+                    <p>Dữ liệu theo người dùng.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-layer-group"></i>
+                    </div>
+                    <h3>Mở rộng</h3>
+                    <p>Kiến trúc tách lớp.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">Upload tài liệu</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-sliders"></i>
+                    </div>
+                    <div class="stat-number">2</div>
+                    <div class="stat-label">Chọn tốc độ</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Bắt đầu đọc</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">Xem tiến độ</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Sẵn sàng cải thiện kỹ năng đọc?</h2>
+                <p>Bắt đầu với tài liệu đầu tiên ngay hôm nay.</p>
+                {% if not current_user.is_authenticated %}
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-rocket"></i> Bắt đầu ngay
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

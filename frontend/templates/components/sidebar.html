@@ -1,0 +1,49 @@
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <i class="fas fa-book-reader"></i>
+        <span>Speed Reading</span>
+    </div>
+    <nav class="sidebar-menu">
+        <a href="{{ url_for('user.dashboard') }}" class="sidebar-item {% if request.endpoint == 'user.dashboard' %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="{{ url_for('reading.train') }}" class="sidebar-item {% if request.endpoint == 'reading.train' %}active{% endif %}">
+            <i class="fas fa-bolt"></i>
+            <span>Luyện đọc</span>
+        </a>
+        <a href="{{ url_for('user.documents') }}" class="sidebar-item {% if request.endpoint == 'user.documents' %}active{% endif %}">
+            <i class="fas fa-folder-open"></i>
+            <span>Tài liệu của tôi</span>
+        </a>
+        <a href="{{ url_for('user.history') }}" class="sidebar-item {% if request.endpoint == 'user.history' %}active{% endif %}">
+            <i class="fas fa-history"></i>
+            <span>Lịch sử đọc</span>
+        </a>
+        <a href="{{ url_for('user.profile') }}" class="sidebar-item {% if request.endpoint == 'user.profile' %}active{% endif %}">
+            <i class="fas fa-user"></i>
+            <span>Trang cá nhân</span>
+        </a>
+        {% if current_user.is_admin %}
+        <a href="{{ url_for('admin.dashboard') }}" class="sidebar-item {% if request.endpoint and request.endpoint.startswith('admin.') %}active{% endif %}">
+            <i class="fas fa-shield-alt"></i>
+            <span>Admin</span>
+        </a>
+        {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <i class="fas fa-user-circle"></i>
+            <div class="sidebar-user-info">
+                <div class="sidebar-username">{{ current_user.username }}</div>
+                <div class="sidebar-role">
+                    {% if current_user.is_admin %}Admin{% else %}Người dùng{% endif %}
+                </div>
+            </div>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" class="sidebar-item sidebar-logout">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>Đăng xuất</span>
+        </a>
+    </div>
+</aside>

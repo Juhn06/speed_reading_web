@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: speed_reading_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: speed_reading
+      POSTGRES_USER: speed_user
+      POSTGRES_PASSWORD: speed_pass
+      TZ: Asia/Bangkok
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U speed_user -d speed_reading"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  postgres_data:

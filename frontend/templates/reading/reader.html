@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+
+{% block title %}Đang đọc - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #1a1a1a;
+        color: #fff;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .navbar, .footer {
+        display: none;
+    }
+
+    .main-content {
+        padding: 0;
+        min-height: 100vh;
+    }
+
+    .reader-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.2rem;
+    }
+
+    .reader-container {
+        width: 100%;
+        max-width: 1000px;
+    }
+
+    .word-display {
+        position: relative;
+        isolation: isolate;
+        background: #2d2d2d;
+        color: #ffd700;
+        font-size: clamp(2rem, 7vw, 5rem);
+        font-weight: 700;
+        text-align: center;
+        border-radius: 22px;
+        min-height: 280px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.9rem;
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+        padding: 1.5rem;
+    }
+
+    .word-display::after {
+        content: "";
+        position: absolute;
+        top: 20%;
+        bottom: 20%;
+        left: 50%;
+        width: 2px;
+        background: rgba(125, 211, 252, 0.3);
+        transform: translateX(-1px);
+        z-index: 0;
+    }
+
+    .rsvp-word {
+        position: relative;
+        z-index: 1;
+        font-family: "Consolas", "Menlo", monospace;
+        letter-spacing: 0.02em;
+    }
+
+    .orp-char {
+        color: #fb7185;
+        text-shadow: 0 0 14px rgba(251, 113, 133, 0.6);
+    }
+
+    .info-bar {
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .info-item {
+        min-width: 145px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        background: rgba(15, 23, 42, 0.45);
+        padding: 0.55rem 0.7rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .info-item i {
+        color: #cbd5e1;
+    }
+
+    .speed-meta {
+        font-size: 0.74rem;
+        color: rgba(226, 232, 240, 0.9);
+    }
+
+    .advanced-panel {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        backdrop-filter: blur(6px);
+    }
+
+    .advanced-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        margin-bottom: 0.85rem;
+        color: #e2e8f0;
+    }
+
+    .advanced-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.7rem;
+    }
+
+    .toggle-item {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.9rem;
+        color: #e2e8f0;
+        user-select: none;
+    }
+
+    .toggle-item input[type="checkbox"] {
+        accent-color: #22c55e;
+        width: 16px;
+        height: 16px;
+    }
+
+    .advanced-range {
+        margin-top: 0.9rem;
+    }
+
+    .advanced-range label {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-size: 0.85rem;
+        color: #cbd5e1;
+    }
+
+    .advanced-range input[type="range"] {
+        width: 100%;
+    }
+
+    .advanced-speed-actions {
+        display: flex;
+        gap: 0.6rem;
+        margin-top: 0.85rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-speed {
+        border: 1px solid rgba(96, 165, 250, 0.45);
+        background: rgba(30, 64, 175, 0.22);
+        color: #dbeafe;
+        border-radius: 10px;
+        padding: 0.42rem 0.7rem;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .btn-speed:hover {
+        background: rgba(37, 99, 235, 0.34);
+    }
+
+    .advanced-hint {
+        margin-top: 0.65rem;
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .reader-controls {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+    }
+
+    .reader-close {
+        position: fixed;
+        top: 18px;
+        right: 18px;
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: none;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10001;
+        transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .reader-close:hover {
+        background: #ef4444;
+        transform: scale(1.06);
+    }
+
+    .reader-close:active {
+        background: #ef4444;
+        transform: scale(0.98);
+    }
+
+    .completion-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(6, 10, 22, 0.7);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+        z-index: 10000;
+    }
+
+    .completion-overlay.show {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .completion-card {
+        position: relative;
+        z-index: 3;
+        background: #ffffff;
+        color: #0f172a;
+        border-radius: 20px;
+        padding: 1.5rem 2rem 2.5rem 2rem;
+        width: min(900px, 95vw);
+        max-height: 85vh;
+        box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
+        text-align: center;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto 1fr; /* chooser, content */
+        gap: 0.75rem;
+    }
+    .completion-header {
+        flex: 0 0 auto;
+    }
+    #documentContentPanel {
+        /* occupy the final grid row and enable an internal scroll region */
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        margin: 0 12px 0 12px;
+        padding: 0 12px 20px 12px; /* reserve more bottom space for horizontal scrollbar */
+        min-height: 0;
+        scrollbar-gutter: stable both-edges;
+    }
+    #documentContent {
+        flex: 1 1 auto;
+        min-height: 0; /* allow the scroll container to shrink inside grid */
+        overflow-y: auto;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-gutter: stable both-edges;
+        box-sizing: border-box;
+        max-height: 100%;
+        padding: 1rem 1.5rem; /* keep inner text away from scrollbar */
+        background: #f8fafc;
+        border-radius: 6px;
+        margin-right: 4px; /* tiny inset so scrollbar track is visible inside rounded corner */
+        white-space: pre; /* preserve newlines and spaces */
+        word-break: normal;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', monospace;
+        color: #0f172a;
+        font-size: 0.95rem;
+        line-height: 1.45;
+    }
+
+    /* Make scrollbar wider and clearly visible */
+    #documentContent {
+        scrollbar-width: thin;
+    }
+    #documentContent::-webkit-scrollbar {
+        width: 14px;
+        height: 14px;
+    }
+    /* Vertical track */
+    #documentContent::-webkit-scrollbar-track:vertical {
+        background: #f1f5f9;
+        border-radius: 12px;
+    }
+    /* Horizontal track (make visible and slightly darker) */
+    #documentContent::-webkit-scrollbar-track:horizontal {
+        background: #f1f5f9;
+        border-radius: 8px;
+    }
+    #documentContent::-webkit-scrollbar-thumb {
+        background-color: #9aa6b2; /* darker thumb for better contrast */
+        border-radius: 10px;
+        border: 3px solid transparent; /* creates padding so thumb doesn't touch edge */
+        background-clip: padding-box;
+    }
+    #documentContent::-webkit-scrollbar-thumb:hover {
+        background-color: #6b7780;
+    }
+
+    .completion-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 0.25rem;
+    }
+
+    .completion-subtitle {
+        color: #64748b;
+        margin-bottom: 1.5rem;
+    }
+
+    .completion-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .completion-stat {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 0.75rem;
+    }
+
+    .completion-stat span {
+        display: block;
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+    }
+
+    .completion-stat strong {
+        font-size: 1.15rem;
+        color: #0f172a;
+    }
+
+    .completion-actions {
+        display: flex;
+        justify-content: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .confetti-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 1;
+    }
+
+    .confetti-layer canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    @media (max-width: 900px) {
+        .advanced-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 640px) {
+        .advanced-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .info-item {
+            min-width: 120px;
+            flex: 1 1 120px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<button class="reader-close" type="button" onclick="goBack(true)" aria-label="Thoát">
+    &times;
+</button>
+
+<div class="reader-page">
+    <div class="reader-container">
+        <div class="word-display" id="wordDisplay">Nhấn Play để bắt đầu</div>
+
+        <div class="info-bar">
+            <div class="info-item">
+                <i class="fas fa-clock"></i>
+                <span id="timer">00:00</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-list-ol"></i>
+                <span><span id="progress">0</span>/<span id="total">0</span> từ</span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-gauge-high"></i>
+                <span><span id="currentSpeed">0</span> từ/phút</span>
+                <small class="speed-meta" id="speedMeta">Base 0</small>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-percentage"></i>
+                <span><span id="percentage">0</span>%</span>
+            </div>
+        </div>
+
+        <div class="advanced-panel">
+            <div class="advanced-header">
+                <i class="fas fa-sliders"></i>
+                <span>RSVP Nâng cao</span>
+            </div>
+
+            <div class="advanced-grid">
+                <label class="toggle-item">
+                    <input type="checkbox" id="orpToggle" checked>
+                    <span>ORP highlight</span>
+                </label>
+                <label class="toggle-item">
+                    <input type="checkbox" id="punctuationPauseToggle" checked>
+                    <span>Nghỉ theo dấu câu</span>
+                </label>
+                <label class="toggle-item">
+                    <input type="checkbox" id="adaptiveSpeedToggle">
+                    <span>Tăng tốc thích nghi</span>
+                </label>
+                <label class="toggle-item">
+                    <input type="checkbox" id="longWordPauseToggle" checked>
+                    <span>Nghỉ từ dài</span>
+                </label>
+            </div>
+
+            <div class="advanced-range">
+                <label for="punctuationFactor">
+                    Hệ số nghỉ theo dấu câu:
+                    <strong id="punctuationFactorValue">1.8x</strong>
+                </label>
+                <input type="range" id="punctuationFactor" min="1.0" max="3.0" step="0.1" value="1.8">
+            </div>
+
+            <div class="advanced-speed-actions">
+                <button type="button" class="btn-speed" onclick="changeSpeed(-25)">-25 WPM</button>
+                <button type="button" class="btn-speed" onclick="changeSpeed(25)">+25 WPM</button>
+            </div>
+
+            <div class="advanced-hint">Phím tắt: Space (Play/Pause), Left/Right (Speed), R (Đặt lại)</div>
+        </div>
+
+        <div class="reader-controls">
+            <button class="btn-control btn-play-pause" id="playPauseBtn" onclick="togglePlayPause()">
+                <i class="fas fa-play"></i>
+                <span>Play</span>
+            </button>
+            <button class="btn-control" onclick="resetReading()">
+                <i class="fas fa-redo"></i>
+                <span>Đặt lại</span>
+            </button>
+            <button class="btn-control" onclick="goBack()">
+                <i class="fas fa-home"></i>
+                <span>Trang chủ</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="completion-overlay" id="completionOverlay">
+    <div class="confetti-layer" id="confettiLayer"></div>
+    <div class="completion-card">
+        <!-- Speed selector shown when user chooses "Đọc lại" -->
+        <div id="completionSpeedSelection" style="display:none; margin-top:1rem; text-align:center;">
+            <h3 style="margin-bottom:0.5rem;">Chọn tốc độ đọc</h3>
+            <div style="max-width:520px;margin:0 auto;">
+                <input type="range" id="completionSpeedSlider" min="100" max="600" value="200" step="1" style="width:100%;">
+                <div style="margin-top:0.5rem; font-weight:700; color:#4f46e5;"><span id="completionSpeedValue">200</span> từ/phút</div>
+                <div id="completionSpeedPresets" style="margin-top:0.75rem; display:flex; gap:1.25rem; justify-content:center; align-items:center;">
+                    <button type="button" class="preset" data-value="120" aria-pressed="false" title="Chậm" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;">
+                        <span class="dot" style="width:12px;height:12px;border-radius:50%;background:#cbd5e1;display:block;margin-bottom:6px;"></span>
+                        <small style="color:#475569;">Chậm</small>
+                    </button>
+                    <button type="button" class="preset" data-value="200" aria-pressed="false" title="Vừa" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;">
+                        <span class="dot" style="width:12px;height:12px;border-radius:50%;background:#cbd5e1;display:block;margin-bottom:6px;"></span>
+                        <small style="color:#475569;">Vừa</small>
+                    </button>
+                    <button type="button" class="preset" data-value="350" aria-pressed="false" title="Nhanh" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;">
+                        <span class="dot" style="width:12px;height:12px;border-radius:50%;background:#cbd5e1;display:block;margin-bottom:6px;"></span>
+                        <small style="color:#475569;">Nhanh</small>
+                    </button>
+                    <button type="button" class="preset" data-value="600" aria-pressed="false" title="Rất nhanh" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;">
+                        <span class="dot" style="width:12px;height:12px;border-radius:50%;background:#cbd5e1;display:block;margin-bottom:6px;"></span>
+                        <small style="color:#475569;">Rất nhanh</small>
+                    </button>
+                </div>
+                <div style="margin-top:1rem; display:flex; gap:0.75rem; justify-content:center;">
+                    <button class="btn btn-primary" id="completionStartBtn"><i class="fas fa-play"></i> Bắt đầu</button>
+                    <button class="btn btn-outline" id="completionCancelBtn">Hủy</button>
+                </div>
+            </div>
+        </div>
+        <div id="documentContentPanel" style="display:none; margin-top:1rem; text-align:left; position:relative; width:100%; padding-bottom:12px;">
+            <div style="font-weight:700; margin-bottom:0.5rem;">Nội dung tài liệu:</div>
+            <div id="documentContent" style="background:#f8fafc; border-radius:6px; box-sizing:border-box; color:#0f172a; font-size:0.95rem; line-height:1.45; width:100%; white-space:pre; padding:1rem 1.5rem;">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/reader.js') }}?v=20260426a"></script>
+{% endblock %}
