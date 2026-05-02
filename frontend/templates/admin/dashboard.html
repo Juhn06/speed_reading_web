@@ -1,182 +1,276 @@
-{% extends "base.html" %}
+{% extends 'admin/base.html' %}
 
-{% block title %}Admin Dashboard - Speed Reading{% endblock %}
+{% block title %}Dashboard - Admin{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+.db-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px; }
+.db-kpi { background:white; border-radius:13px; padding:18px 16px; box-shadow:0 2px 8px rgba(0,0,0,0.06);
+          display:flex; align-items:center; gap:12px; transition:transform 0.2s; }
+.db-kpi:hover { transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,0.1); }
+.db-kpi-icon { width:46px; height:46px; border-radius:12px; display:flex; align-items:center;
+               justify-content:center; font-size:19px; flex-shrink:0; }
+.db-kpi-label { font-size:11.5px; color:#94a3b8; font-weight:500; margin-bottom:3px; }
+.db-kpi-value { font-size:24px; font-weight:800; color:#1e293b; line-height:1; }
+.db-kpi-sub { font-size:11px; color:#94a3b8; margin-top:3px; }
+
+.db-mid { display:grid; grid-template-columns:1.4fr 1fr; gap:16px; margin-bottom:16px; }
+.db-bot { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.db-card { background:white; border-radius:13px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.db-card h4 { margin:0 0 14px; color:#1e293b; font-size:13.5px; font-weight:700;
+              display:flex; align-items:center; gap:8px; padding-bottom:11px; border-bottom:1px solid #f1f5f9; }
+
+.user-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #f8faff; }
+.user-row:last-child { border-bottom:none; padding-bottom:0; }
+.u-av { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#8b5cf6);
+        display:flex; align-items:center; justify-content:center; color:white; font-size:12px; flex-shrink:0; }
+.u-name { font-weight:600; font-size:13px; color:#1e293b; }
+.u-meta { font-size:11px; color:#94a3b8; }
+
+.doc-row { display:flex; align-items:center; gap:9px; padding:8px 0; border-bottom:1px solid #f8faff; }
+.doc-row:last-child { border-bottom:none; padding-bottom:0; }
+.d-icon { width:28px; height:28px; border-radius:7px; display:flex; align-items:center;
+          justify-content:center; font-size:12px; flex-shrink:0; }
+.d-name { font-size:12.5px; color:#1e293b; font-weight:500;
+          white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; }
+.d-meta { font-size:11px; color:#94a3b8; }
+
+.quick-link { display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:9px;
+              text-decoration:none; color:#1e293b; font-weight:600; font-size:13.5px;
+              border:1px solid #e8edf5; transition:all 0.18s; margin-bottom:7px; }
+.quick-link:last-child { margin-bottom:0; }
+.quick-link:hover { background:#f8faff; border-color:#6366f1; color:#6366f1; transform:translateX(3px); }
+.ql-icon { width:34px; height:34px; border-radius:8px; display:flex; align-items:center;
+           justify-content:center; font-size:14px; flex-shrink:0; }
+
+.top-reader-row { display:flex; align-items:center; gap:0; margin-bottom:10px; }
+.top-reader-row:last-child { margin-bottom:0; }
+.tr-rank { width:22px; font-size:12px; font-weight:700; color:#94a3b8; flex-shrink:0; }
+.tr-name { font-size:13px; font-weight:600; color:#1e293b; width:80px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tr-bar-wrap { flex:1; height:8px; background:#f1f5f9; border-radius:999px; overflow:hidden; margin:0 8px; }
+.tr-bar { height:100%; border-radius:999px; background:linear-gradient(90deg,#6366f1,#8b5cf6); }
+.tr-count { font-size:12px; color:#6366f1; font-weight:700; white-space:nowrap; }
+
+.rate-bar { height:5px; border-radius:999px; background:#f1f5f9; overflow:hidden; margin-top:4px; width:70px; }
+.rate-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#10b981,#34d399); }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="admin-dashboard">
-    <div class="container">
-        
-        <div class="page-header">
-            <h1><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
-            <p>Quản lý và giám sát hệ thống</p>
+
+    <!-- HEADER -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="margin:0; font-size:21px;">Xin chào, {{ current_user.username }} 👋</h2>
+            <p style="margin:3px 0 0; color:#94a3b8; font-size:12.5px;">Tổng quan hệ thống Speed Reading</p>
         </div>
-
-        
-        <div class="admin-stats-grid">
-            <div class="admin-stat-card">
-                <div class="stat-icon bg-primary">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-label">Tổng người dùng</div>
-                    <div class="stat-value">{{ stats.total_users }}</div>
-                    <div class="stat-sub">+{{ stats.new_users }} tuần này</div>
-                </div>
-            </div>
-
-            <div class="admin-stat-card">
-                <div class="stat-icon bg-success">
-                    <i class="fas fa-book"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-label">Tổng phiên đọc</div>
-                    <div class="stat-value">{{ stats.total_sessions }}</div>
-                    <div class="stat-sub">{{ stats.sessions_today }} hôm nay</div>
-                </div>
-            </div>
-
-            <div class="admin-stat-card">
-                <div class="stat-icon bg-warning">
-                    <i class="fas fa-folder"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-label">Tổng tài liệu</div>
-                    <div class="stat-value">{{ stats.total_documents }}</div>
-                </div>
-            </div>
-
-            <div class="admin-stat-card">
-                <div class="stat-icon bg-info">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-label">Hoạt động</div>
-                    <div class="stat-value">{{ ((stats.sessions_today / stats.total_sessions * 100) if stats.total_sessions > 0 else 0)|round(1) }}%</div>
-                    <div class="stat-sub">Tỷ lệ hôm nay</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="admin-content-grid">
-            
-            <div class="admin-section card">
-                <div class="card-header">
-                    <h2><i class="fas fa-users"></i> Người dùng mới nhất</h2>
-                    <a href="{{ url_for('admin.users') }}" class="view-all">
-                        Xem tất cả <i class="fas fa-arrow-right"></i>
-                    </a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Username</th>
-                                    <th>Email</th>
-                                    <th>Ngày tham gia</th>
-                                    <th>Phiên đọc</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for user in recent_users %}
-                                <tr>
-                                    <td>{{ user.id }}</td>
-                                    <td>
-                                        <i class="fas fa-user-circle"></i>
-                                        {{ user.username }}
-                                        {% if user.is_admin %}
-                                        <span class="badge badge-admin">Admin</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ user.email }}</td>
-                                    <td>{{ user.created_at | local_date }}</td>
-                                    <td>{{ user.get_total_sessions() }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            
-            <div class="admin-section card">
-                <div class="card-header">
-                    <h2><i class="fas fa-history"></i> Phiên đọc gần đây</h2>
-                    <a href="{{ url_for('admin.sessions') }}" class="view-all">
-                        Xem tất cả <i class="fas fa-arrow-right"></i>
-                    </a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>File</th>
-                                    <th>Tốc độ</th>
-                                    <th>Tiến độ</th>
-                                    <th>Trạng thái</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for session in recent_sessions %}
-                                <tr>
-                                    <td>{{ session.user.username }}</td>
-                                    <td>{{ session.filename[:30] }}...</td>
-                                    <td>{{ session.speed }} từ/phút</td>
-                                    <td>{{ session.words_read }}/{{ session.total_words }}</td>
-                                    <td>
-                                        {% if session.completed %}
-                                        <span class="badge badge-success">
-                                            <i class="fas fa-check"></i> Hoàn thành
-                                        </span>
-                                        {% else %}
-                                        <span class="badge badge-warning">
-                                            <i class="fas fa-clock"></i> Chưa xong
-                                        </span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        
-        <div class="quick-actions card">
-            <div class="card-header">
-                <h2><i class="fas fa-bolt"></i> Thao tác nhanh</h2>
-            </div>
-            <div class="card-body">
-                <div class="actions-grid">
-                    <a href="{{ url_for('admin.users') }}" class="action-btn">
-                        <i class="fas fa-users"></i>
-                        <span>Quản lý Users</span>
-                    </a>
-                    <a href="{{ url_for('admin.documents') }}" class="action-btn">
-                        <i class="fas fa-folder"></i>
-                        <span>Quản lý Tài liệu</span>
-                    </a>
-                    <a href="{{ url_for('admin.sessions') }}" class="action-btn">
-                        <i class="fas fa-history"></i>
-                        <span>Quản lý Phiên đọc</span>
-                    </a>
-                    <a href="{{ url_for('user.dashboard') }}" class="action-btn">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>User Dashboard</span>
-                    </a>
-                </div>
-            </div>
+        <div style="font-size:12.5px; color:#94a3b8; background:white; padding:7px 13px;
+                    border-radius:8px; border:1px solid #e8edf5;">
+            <i class="fas fa-clock" style="color:#6366f1; margin-right:5px;"></i>
+            <span id="clock"></span>
         </div>
     </div>
+
+    <!-- KPI -->
+    <div class="db-grid">
+        <div class="db-kpi">
+            <div class="db-kpi-icon" style="background:#eef2ff; color:#6366f1;"><i class="fas fa-users"></i></div>
+            <div><div class="db-kpi-label">Người dùng</div><div class="db-kpi-value">{{ stats.total_users }}</div><div class="db-kpi-sub">tài khoản</div></div>
+        </div>
+        <div class="db-kpi">
+            <div class="db-kpi-icon" style="background:#f0fdf4; color:#16a34a;"><i class="fas fa-folder-open"></i></div>
+            <div><div class="db-kpi-label">Tài liệu</div><div class="db-kpi-value">{{ stats.total_docs }}</div><div class="db-kpi-sub">đã upload</div></div>
+        </div>
+        <div class="db-kpi">
+            <div class="db-kpi-icon" style="background:#fef3c7; color:#f59e0b;"><i class="fas fa-book-open"></i></div>
+            <div><div class="db-kpi-label">Phiên đọc</div><div class="db-kpi-value">{{ stats.total_sessions }}</div><div class="db-kpi-sub">tổng cộng</div></div>
+        </div>
+        <div class="db-kpi">
+            <div class="db-kpi-icon" style="background:#f0fdf4; color:#16a34a;"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="db-kpi-label">Hoàn thành</div>
+                <div class="db-kpi-value">{{ completed }}</div>
+                {% if stats.total_sessions > 0 %}
+                <div class="rate-bar"><div class="rate-fill" style="width:{{ (completed/stats.total_sessions*100)|round|int }}%;"></div></div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="db-kpi">
+            <div class="db-kpi-icon" style="background:#eff6ff; color:#3b82f6;"><i class="fas fa-chalkboard-teacher"></i></div>
+            <div><div class="db-kpi-label">Lớp học</div><div class="db-kpi-value">{{ classes_count }}</div><div class="db-kpi-sub">đang mở</div></div>
+        </div>
+    </div>
+
+    <!-- MIDDLE: 2 biểu đồ khác hẳn báo cáo -->
+    <div class="db-mid">
+
+        <!-- User mới với tab chọn khoảng -->
+        <div class="db-card">
+            <h4 style="justify-content:space-between;">
+                <span><i class="fas fa-user-plus" style="color:#6366f1;"></i> Người dùng mới</span>
+                <div style="display:flex; gap:4px;">
+                    <button onclick="switchPeriod('7d')" id="tab-7d"
+                            style="padding:4px 11px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:600;
+                                   background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white;">7 ngày</button>
+                    <button onclick="switchPeriod('30d')" id="tab-30d"
+                            style="padding:4px 11px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:600;
+                                   background:#f1f5f9; color:#64748b;">Tháng</button>
+                    <button onclick="switchPeriod('year')" id="tab-year"
+                            style="padding:4px 11px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:600;
+                                   background:#f1f5f9; color:#64748b;">Năm</button>
+                </div>
+            </h4>
+            <canvas id="weeklyChart" height="130"></canvas>
+        </div>
+
+        <!-- Top 5 user đọc nhiều nhất -->
+        <div class="db-card">
+            <h4><i class="fas fa-trophy" style="color:#f59e0b;"></i> Top 5 người đọc nhiều nhất</h4>
+            {% if top_readers %}
+                {% set max_sessions = top_readers[0][1] %}
+                {% for user, session_count, total_words in top_readers %}
+                <div class="top-reader-row">
+                    <div class="tr-rank">{{ loop.index }}</div>
+                    <div class="tr-name" title="{{ user.username }}">{{ user.username }}</div>
+                    <div class="tr-bar-wrap">
+                        <div class="tr-bar" style="width:{% if max_sessions > 0 %}{{ (session_count/max_sessions*100)|round|int }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                    <div class="tr-count">{{ session_count }} phiên</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center; color:#94a3b8; padding:20px; font-size:13px;">Chưa có dữ liệu</div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- BOTTOM: 3 cột -->
+    <div class="db-bot">
+
+        <!-- Recent Users -->
+        <div class="db-card">
+            <h4><i class="fas fa-users" style="color:#6366f1;"></i> Người dùng mới nhất</h4>
+            {% for u in recent_users %}
+            <div class="user-row">
+                <div class="u-av"><i class="fas fa-user" style="font-size:11px;"></i></div>
+                <div style="min-width:0; flex:1;">
+                    <div class="u-name">{{ u.username }}</div>
+                    <div class="u-meta">{{ u.email }}</div>
+                </div>
+                {% if u.is_admin %}
+                <span style="background:#fdf4ff; color:#a855f7; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; flex-shrink:0;">Admin</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Recent Docs -->
+        <div class="db-card">
+            <h4><i class="fas fa-file-alt" style="color:#10b981;"></i> Tài liệu gần đây</h4>
+            {% for d in recent_docs %}
+            <div class="doc-row">
+                <div class="d-icon" style="{% if d.file_type == 'pdf' %}background:#fee2e2; color:#ef4444;{% elif d.file_type == 'docx' %}background:#eef2ff; color:#6366f1;{% else %}background:#f1f5f9; color:#64748b;{% endif %}">
+                    {% if d.file_type == 'pdf' %}<i class="fas fa-file-pdf"></i>
+                    {% elif d.file_type == 'docx' %}<i class="fas fa-file-word"></i>
+                    {% else %}<i class="fas fa-file-alt"></i>{% endif %}
+                </div>
+                <div style="min-width:0;">
+                    <div class="d-name" title="{{ d.original_filename }}">{{ d.original_filename }}</div>
+                    <div class="d-meta">{{ d.word_count }} từ · {{ d.file_type|upper }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Quick Links -->
+        <div class="db-card">
+            <h4><i class="fas fa-bolt" style="color:#f59e0b;"></i> Truy cập nhanh</h4>
+            <a href="{{ url_for('admin.users') }}" class="quick-link">
+                <div class="ql-icon" style="background:#eef2ff; color:#6366f1;"><i class="fas fa-users"></i></div>
+                Quản lý người dùng
+                <i class="fas fa-chevron-right" style="margin-left:auto; font-size:11px; color:#cbd5e1;"></i>
+            </a>
+            <a href="{{ url_for('admin.classes') }}" class="quick-link">
+                <div class="ql-icon" style="background:#fef3c7; color:#f59e0b;"><i class="fas fa-chalkboard-teacher"></i></div>
+                Quản lý lớp học
+                <i class="fas fa-chevron-right" style="margin-left:auto; font-size:11px; color:#cbd5e1;"></i>
+            </a>
+            <a href="{{ url_for('admin.report') }}" class="quick-link">
+                <div class="ql-icon" style="background:#fdf4ff; color:#a855f7;"><i class="fas fa-chart-bar"></i></div>
+                Xem báo cáo chi tiết
+                <i class="fas fa-chevron-right" style="margin-left:auto; font-size:11px; color:#cbd5e1;"></i>
+            </a>
+            <a href="{{ url_for('admin.export_report') }}" class="quick-link">
+                <div class="ql-icon" style="background:#f0fdf4; color:#16a34a;"><i class="fas fa-file-csv"></i></div>
+                Xuất báo cáo CSV
+                <i class="fas fa-chevron-right" style="margin-left:auto; font-size:11px; color:#cbd5e1;"></i>
+            </a>
+        </div>
+
+    </div>
 </div>
+
+<script>
+// Clock
+function updateClock() {
+    document.getElementById('clock').textContent = new Date().toLocaleString('vi-VN');
+}
+updateClock(); setInterval(updateClock, 1000);
+
+// Data cho 3 khoảng thời gian
+const periodData = {
+    '7d':   { labels: {{ weekly_labels | tojson }},  data: {{ weekly_new_users | tojson }} },
+    '30d':  { labels: {{ monthly_labels | tojson }}, data: {{ monthly_new_users | tojson }} },
+    'year': { labels: {{ yearly_labels | tojson }},  data: {{ yearly_new_users | tojson }} }
+};
+
+const wCtx = document.getElementById('weeklyChart').getContext('2d');
+const wChart = new Chart(wCtx, {
+    type: 'bar',
+    data: {
+        labels: periodData['7d'].labels,
+        datasets: [{
+            label: 'User mới',
+            data: periodData['7d'].data,
+            backgroundColor: 'rgba(99,102,241,0.18)',
+            borderColor: '#6366f1',
+            borderWidth: 2,
+            borderRadius: 7,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, grid: { color: '#f1f5f9' } },
+            x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 11 } } }
+        }
+    }
+});
+
+let activePeriod = '7d';
+function switchPeriod(period) {
+    if (period === activePeriod) return;
+    activePeriod = period;
+
+    // Update chart data
+    wChart.data.labels = periodData[period].labels;
+    wChart.data.datasets[0].data = periodData[period].data;
+    wChart.update();
+
+    // Update tab styles
+    ['7d','30d','year'].forEach(p => {
+        const btn = document.getElementById('tab-' + p);
+        if (p === period) {
+            btn.style.background = 'linear-gradient(135deg,#6366f1,#8b5cf6)';
+            btn.style.color = 'white';
+        } else {
+            btn.style.background = '#f1f5f9';
+            btn.style.color = '#64748b';
+        }
+    });
+}
+</script>
 {% endblock %}

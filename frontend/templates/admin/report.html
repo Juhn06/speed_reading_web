@@ -1,0 +1,270 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Báo cáo{% endblock %}
+
+{% block extra_css %}
+<style>
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:24px; }
+.kpi-card { background:white; border-radius:14px; padding:20px 18px; box-shadow:0 2px 8px rgba(0,0,0,0.06); display:flex; align-items:center; gap:14px; }
+.kpi-icon { width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.kpi-label { font-size:12px; color:#94a3b8; font-weight:500; margin-bottom:3px; }
+.kpi-value { font-size:22px; font-weight:800; color:#1e293b; line-height:1; }
+.charts-row { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:24px; }
+.chart-card { background:white; border-radius:14px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.chart-card h4 { margin:0 0 16px; color:#1e293b; font-size:15px; display:flex; align-items:center; gap:8px; }
+.filter-bar { background:white; border-radius:12px; padding:16px 20px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.filter-group { display:flex; flex-direction:column; gap:5px; }
+.filter-group label { font-size:12px; color:#64748b; font-weight:600; }
+.filter-group input, .filter-group select { padding:8px 12px; border-radius:8px; border:1px solid #e2e8f0; font-size:13px; background:#f8faff; outline:none; }
+.filter-group input:focus, .filter-group select:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
+.table-card { background:white; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.06); overflow:hidden; margin-bottom:20px; }
+.table-card-header { padding:16px 20px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; }
+.table-card-header h4 { margin:0; color:#1e293b; font-size:15px; }
+.report-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+.report-table th { padding:12px 14px; background:#f8faff; color:#64748b; font-weight:600; text-align:left; border-bottom:2px solid #e8edf5; white-space:nowrap; }
+.report-table td { padding:12px 14px; border-bottom:1px solid #f1f5f9; color:#1e293b; vertical-align:middle; }
+.report-table tr:hover td { background:#fafbff; }
+.badge-done { background:#f0fdf4; color:#16a34a; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+.badge-undone { background:#fef3c7; color:#d97706; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+.search-inline { position:relative; }
+.search-inline i { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:13px; }
+.search-inline input { padding:8px 12px 8px 32px; border-radius:8px; border:1px solid #e2e8f0; font-size:13px; background:#f8faff; outline:none; width:220px; }
+.export-btn { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:600; background:linear-gradient(135deg,#10b981,#059669); color:white; text-decoration:none; }
+.export-btn:hover { opacity:0.9; color:white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+
+    <!-- HEADER -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+        <h2 style="margin:0;"><i class="fas fa-chart-bar" style="color:#6366f1; margin-right:10px;"></i> Báo cáo</h2>
+        <a href="{{ url_for('admin.export_report', **filters) }}" class="export-btn">
+            <i class="fas fa-file-csv"></i> Xuất CSV
+        </a>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#eef2ff; color:#6366f1;"><i class="fas fa-users"></i></div>
+            <div><div class="kpi-label">Người dùng</div><div class="kpi-value">{{ total_users }}</div></div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#f0fdf4; color:#16a34a;"><i class="fas fa-folder-open"></i></div>
+            <div><div class="kpi-label">Tài liệu</div><div class="kpi-value">{{ total_docs }}</div></div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#fef3c7; color:#f59e0b;"><i class="fas fa-book-open"></i></div>
+            <div><div class="kpi-label">Phiên đọc</div><div class="kpi-value">{{ total_sessions }}</div></div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#eff6ff; color:#3b82f6;"><i class="fas fa-tachometer-alt"></i></div>
+            <div><div class="kpi-label">Tốc độ TB</div><div class="kpi-value">{{ avg_speed }}<span style="font-size:12px; color:#94a3b8; font-weight:500;"> từ/p</span></div></div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#f0fdf4; color:#16a34a;"><i class="fas fa-check-circle"></i></div>
+            <div><div class="kpi-label">Hoàn thành</div><div class="kpi-value">{{ completed_count }}</div></div>
+        </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-row">
+        <div class="chart-card">
+            <h4><i class="fas fa-chart-line" style="color:#6366f1;"></i> Phiên đọc theo tháng ({{ current_year }})</h4>
+            <canvas id="lineChart" height="110"></canvas>
+        </div>
+        <div class="chart-card">
+            <h4><i class="fas fa-chart-pie" style="color:#f59e0b;"></i> Tỷ lệ hoàn thành</h4>
+            <canvas id="pieChart" height="160"></canvas>
+            <div style="display:flex; justify-content:center; gap:20px; margin-top:12px; font-size:13px;">
+                <span><span style="display:inline-block;width:12px;height:12px;background:#10b981;border-radius:3px;margin-right:5px;"></span>Hoàn thành ({{ completed_count }})</span>
+                <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:3px;margin-right:5px;"></span>Chưa xong ({{ uncompleted_count }})</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <form method="GET" action="{{ url_for('admin.report') }}">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Từ ngày</label>
+                <input type="date" name="date_from" value="{{ filters.date_from }}">
+            </div>
+            <div class="filter-group">
+                <label>Đến ngày</label>
+                <input type="date" name="date_to" value="{{ filters.date_to }}">
+            </div>
+            <div class="filter-group">
+                <label>Người dùng</label>
+                <select name="user_id" style="min-width:160px;">
+                    <option value="">Tất cả</option>
+                    {% for u in all_users %}
+                    <option value="{{ u.id }}" {% if filters.user_id == u.id|string %}selected{% endif %}>{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-end;">
+                <button type="submit" style="padding:9px 18px; border-radius:8px; border:none; cursor:pointer;
+                        font-size:13px; font-weight:600; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white;">
+                    <i class="fas fa-filter"></i> Lọc
+                </button>
+                <a href="{{ url_for('admin.report') }}" style="padding:9px 14px; border-radius:8px;
+                   background:#f1f5f9; color:#64748b; text-decoration:none; font-size:13px; font-weight:600;">
+                    <i class="fas fa-times"></i> Xóa lọc
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <!-- TABLE -->
+    <div class="table-card">
+        <div class="table-card-header">
+            <h4><i class="fas fa-list" style="color:#6366f1; margin-right:8px;"></i> Chi tiết phiên đọc</h4>
+            <div class="search-inline">
+                <i class="fas fa-search"></i>
+                <input type="text" id="tableSearch" placeholder="Tìm nhanh..." oninput="filterTable()">
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table class="report-table" id="reportTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Người dùng</th>
+                        <th>Tài liệu</th>
+                        <th>Tổng từ</th>
+                        <th>Từ đã đọc</th>
+                        <th>Tốc độ</th>
+                        <th>Thời gian</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    {% if pagination.items | length == 0 %}
+                    <tr><td colspan="9" style="padding:48px; text-align:center; color:#94a3b8;">
+                        <i class="fas fa-inbox" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
+                        Không có dữ liệu phù hợp với bộ lọc
+                    </td></tr>
+                    {% else %}
+                    {% for session, user in pagination.items %}
+                    <tr>
+                        <td style="color:#94a3b8;">{{ session.id }}</td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                                            display:flex; align-items:center; justify-content:center; color:white; font-size:11px; flex-shrink:0;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <strong>{{ user.username }}</strong>
+                            </div>
+                        </td>
+                        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ session.filename }}">
+                            {{ session.filename }}
+                        </td>
+                        <td>{{ "{:,}".format(session.total_words) }}</td>
+                        <td>{{ "{:,}".format(session.words_read) }}</td>
+                        <td><span style="background:#eef2ff; color:#6366f1; padding:2px 8px; border-radius:6px; font-weight:600; font-size:12px;">
+                            {{ session.speed }} từ/p
+                        </span></td>
+                        <td>{{ session.format_duration() }}</td>
+                        <td>
+                            {% if session.completed %}
+                            <span class="badge-done"><i class="fas fa-check"></i> Xong</span>
+                            {% else %}
+                            <span class="badge-undone"><i class="fas fa-clock"></i> Chưa</span>
+                            {% endif %}
+                        </td>
+                        <td style="color:#64748b; white-space:nowrap;">
+                            {{ session.created_at.strftime('%d/%m/%Y %H:%M') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PAGINATION -->
+        {% if pagination.pages > 1 %}
+        <div style="display:flex; align-items:center; justify-content:center; gap:6px; padding:16px; border-top:1px solid #f1f5f9;">
+            {% if pagination.has_prev %}
+            <a href="?page={{ pagination.prev_num }}&{{ filters | urlencode }}"
+               style="padding:6px 14px; border-radius:8px; background:#f1f5f9; color:#64748b; text-decoration:none; font-size:13px;">← Trước</a>
+            {% endif %}
+            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                <a href="?page={{ p }}&{{ filters | urlencode }}"
+                   style="padding:6px 12px; border-radius:8px; text-decoration:none; font-size:13px; font-weight:600;
+                          {% if p == pagination.page %}background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;
+                          {% else %}background:#f1f5f9;color:#64748b;{% endif %}">{{ p }}</a>
+                {% else %}<span style="color:#94a3b8;">…</span>{% endif %}
+            {% endfor %}
+            {% if pagination.has_next %}
+            <a href="?page={{ pagination.next_num }}&{{ filters | urlencode }}"
+               style="padding:6px 14px; border-radius:8px; background:#f1f5f9; color:#64748b; text-decoration:none; font-size:13px;">Tiếp →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script>
+// Line chart
+const lineCtx = document.getElementById('lineChart').getContext('2d');
+new Chart(lineCtx, {
+    type: 'line',
+    data: {
+        labels: ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'],
+        datasets: [{
+            label: 'Phiên đọc',
+            data: {{ monthly | tojson }},
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99,102,241,0.08)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#6366f1',
+            pointRadius: 4,
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f1f5f9' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// Pie chart
+const pieCtx = document.getElementById('pieChart').getContext('2d');
+new Chart(pieCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Hoàn thành', 'Chưa xong'],
+        datasets: [{
+            data: [{{ completed_count }}, {{ uncompleted_count }}],
+            backgroundColor: ['#10b981', '#f59e0b'],
+            borderWidth: 0,
+        }]
+    },
+    options: {
+        cutout: '65%',
+        plugins: { legend: { display: false } }
+    }
+});
+
+// Quick search in table
+function filterTable() {
+    const kw = document.getElementById('tableSearch').value.toLowerCase();
+    document.querySelectorAll('#tableBody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(kw) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

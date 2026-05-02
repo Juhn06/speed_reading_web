@@ -3,34 +3,71 @@
         <i class="fas fa-book-reader"></i>
         <span>Speed Reading</span>
     </div>
+
     <nav class="sidebar-menu">
-        <a href="{{ url_for('user.dashboard') }}" class="sidebar-item {% if request.endpoint == 'user.dashboard' %}active{% endif %}">
+
+        {% if current_user.is_admin %}
+
+        <!-- 🔥 ADMIN MENU -->
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="sidebar-item {% if request.endpoint and request.endpoint.startswith('admin.') %}active{% endif %}">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard Admin</span>
+        </a>
+
+        <a href="#" class="sidebar-item">
+            <i class="fas fa-users"></i>
+            <span>Quản lý người dùng</span>
+        </a>
+
+        <a href="#" class="sidebar-item">
+            <i class="fas fa-book"></i>
+            <span>Lớp học</span>
+        </a>
+
+        {% else %}
+
+        <!-- 👤 USER MENU -->
+        <a href="{{ url_for('user.dashboard') }}"
+           class="sidebar-item {% if request.endpoint == 'user.dashboard' %}active{% endif %}">
             <i class="fas fa-tachometer-alt"></i>
             <span>Dashboard</span>
         </a>
-        <a href="{{ url_for('reading.train') }}" class="sidebar-item {% if request.endpoint == 'reading.train' %}active{% endif %}">
+
+        <a href="{{ url_for('reading.train') }}"
+           class="sidebar-item {% if request.endpoint == 'reading.train' %}active{% endif %}">
             <i class="fas fa-bolt"></i>
             <span>Luyện đọc</span>
         </a>
-        <a href="{{ url_for('user.documents') }}" class="sidebar-item {% if request.endpoint == 'user.documents' %}active{% endif %}">
+
+        <a href="{{ url_for('class.list_class') }}"
+           class="sidebar-item {% if request.endpoint == 'class.list_class' or request.endpoint == 'class.class_detail' %}active{% endif %}">
+            <i class="fas fa-chalkboard-teacher"></i>
+            <span>Lớp học</span>
+        </a>
+
+        <a href="{{ url_for('user.documents') }}"
+           class="sidebar-item {% if request.endpoint == 'user.documents' %}active{% endif %}">
             <i class="fas fa-folder-open"></i>
             <span>Tài liệu của tôi</span>
         </a>
-        <a href="{{ url_for('user.history') }}" class="sidebar-item {% if request.endpoint == 'user.history' %}active{% endif %}">
+
+        <a href="{{ url_for('user.history') }}"
+           class="sidebar-item {% if request.endpoint == 'user.history' %}active{% endif %}">
             <i class="fas fa-history"></i>
             <span>Lịch sử đọc</span>
         </a>
-        <a href="{{ url_for('user.profile') }}" class="sidebar-item {% if request.endpoint == 'user.profile' %}active{% endif %}">
+
+        <a href="{{ url_for('user.profile') }}"
+           class="sidebar-item {% if request.endpoint == 'user.profile' %}active{% endif %}">
             <i class="fas fa-user"></i>
             <span>Trang cá nhân</span>
         </a>
-        {% if current_user.is_admin %}
-        <a href="{{ url_for('admin.dashboard') }}" class="sidebar-item {% if request.endpoint and request.endpoint.startswith('admin.') %}active{% endif %}">
-            <i class="fas fa-shield-alt"></i>
-            <span>Admin</span>
-        </a>
+
         {% endif %}
+
     </nav>
+
     <div class="sidebar-footer">
         <div class="sidebar-user">
             <i class="fas fa-user-circle"></i>
@@ -41,6 +78,7 @@
                 </div>
             </div>
         </div>
+
         <a href="{{ url_for('auth.logout') }}" class="sidebar-item sidebar-logout">
             <i class="fas fa-sign-out-alt"></i>
             <span>Đăng xuất</span>

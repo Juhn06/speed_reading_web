@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}{{ class_obj.name }} - Speed Reading{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="app-shell">
+    {% include 'components/sidebar.html' %}
+    <div class="app-main">
+        <div class="documents-page">
+            <div class="container">
+
+                <!-- HEADER -->
+                <div class="page-header" style="display:flex; align-items:center; gap: 16px;">
+                    <a href="{{ url_for('class.list_class') }}" class="btn btn-outline" style="padding: 8px 14px; font-size: 13px;">
+                        <i class="fas fa-arrow-left"></i> Quay lại
+                    </a>
+                    <div>
+                        <h1><i class="fas fa-chalkboard-teacher"></i> {{ class_obj.name }}</h1>
+                        {% if class_obj.description %}
+                        <p>{{ class_obj.description }}</p>
+                        {% else %}
+                        <p>{{ documents | length }} bài học</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- DANH SÁCH BÀI HỌC -->
+                {% if documents %}
+                <div class="documents-grid">
+                    {% for doc in documents %}
+                    <div class="document-card card">
+
+                        <div class="doc-icon-large
+                            {% if doc.file_type == 'pdf' %}doc-icon-pdf
+                            {% elif doc.file_type == 'docx' %}doc-icon-docx
+                            {% else %}doc-icon-default{% endif %}">
+                            {% if doc.file_type == 'pdf' %}
+                                <i class="fas fa-file-pdf"></i>
+                            {% elif doc.file_type == 'docx' %}
+                                <i class="fas fa-file-word"></i>
+                            {% else %}
+                                <i class="fas fa-file-alt"></i>
+                            {% endif %}
+                        </div>
+
+                        <div class="doc-content">
+                            <div class="doc-header">
+                                <h3 class="doc-title">{{ doc.original_filename }}</h3>
+                            </div>
+
+                            <div class="doc-stats-table">
+                                <div class="stats-row">
+                                    <div class="stats-label"><i class="fas fa-font"></i> Số từ</div>
+                                    <div class="stats-value">{{ doc.word_count }} từ</div>
+                                </div>
+                                <div class="stats-row stats-row-format">
+                                    <div class="stats-label">Định dạng</div>
+                                    <div class="stats-value stats-value-format">
+                                        <span>{{ doc.file_type | upper }}</span>
+                                        {% if doc.file_type == 'pdf' %}
+                                            <i class="fas fa-file-pdf"></i>
+                                        {% elif doc.file_type == 'docx' %}
+                                            <i class="fas fa-file-word"></i>
+                                        {% else %}
+                                            <i class="fas fa-file-alt"></i>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="doc-actions">
+                            <button class="btn btn-primary" onclick="loadClassDocument({{ doc.id }})">
+                                <i class="fas fa-book-reader"></i> Đọc ngay
+                            </button>
+                        </div>
+
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% else %}
+                <div class="empty-state card">
+                    <div class="card-body">
+                        <i class="fas fa-folder-open fa-4x"></i>
+                        <h3>Chưa có bài học nào</h3>
+                        <p>Giáo viên chưa thêm tài liệu vào lớp này.</p>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function loadClassDocument(docId) {
+        try {
+            showLoading('Đang tải bài học...');
+
+            const response = await fetch(`/reading/load-document/${docId}`);
+            const data = await response.json();
+
+            hideLoading();
+
+            if (data.error) {
+                showAlert(data.error, 'error');
+                return;
+            }
+
+            // Lưu vào localStorage
+            localStorage.setItem('words', JSON.stringify(data.words));
+            localStorage.setItem('filename', data.filename);
+            localStorage.setItem('doc_id', String(data.doc_id));
+            localStorage.setItem('total_words', String(data.total));
+
+            // Lấy speed đã lưu, fallback 200
+            const savedSpeed = parseInt(localStorage.getItem('speed'), 10) || 200;
+
+            // Hiện modal chọn tốc độ
+            showSpeedChooser(savedSpeed, (chosenSpeed) => {
+                localStorage.setItem('speed', String(chosenSpeed));
+                window.location.href = `/reading/reader?doc_id=${data.doc_id}&speed=${chosenSpeed}`;
+            });
+
+        } catch (error) {
+            hideLoading();
+            showAlert('Lỗi tải bài học', 'error');
+        }
+    }
+
+    function showSpeedChooser(initialSpeed, onConfirm) {
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,10,22,0.6);z-index:20000;';
+
+        const card = document.createElement('div');
+        card.style.cssText = 'background:#fff;padding:1.5rem 1.75rem;border-radius:16px;min-width:400px;max-width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.2);';
+
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:1.15rem;font-weight:700;margin-bottom:0.25rem;color:#1e293b;';
+        title.textContent = 'Chọn tốc độ đọc';
+
+        const subtitle = document.createElement('div');
+        subtitle.style.cssText = 'font-size:12px;color:#94a3b8;margin-bottom:1rem;';
+        subtitle.textContent = 'Kéo thanh trượt hoặc chọn mức có sẵn';
+
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = '100';
+        slider.max = '600';
+        slider.step = '1';
+        slider.value = String(initialSpeed || 200);
+        slider.style.cssText = 'width:100%;accent-color:#6366f1;';
+
+        const value = document.createElement('div');
+        value.style.cssText = 'margin-top:0.5rem;font-weight:700;font-size:1.1rem;color:#6366f1;';
+        value.textContent = slider.value + ' từ/phút';
+
+        const presets = [{v:120, t:'Chậm'}, {v:200, t:'Vừa'}, {v:350, t:'Nhanh'}, {v:600, t:'Rất nhanh'}];
+        const presetsRow = document.createElement('div');
+        presetsRow.style.cssText = 'display:flex;justify-content:center;gap:1rem;margin-top:0.75rem;';
+
+        function makePreset(p) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.setAttribute('data-value', String(p.v));
+            btn.style.cssText = 'background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;padding:4px 8px;border-radius:8px;transition:background 0.15s;';
+
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            dot.style.cssText = 'width:11px;height:11px;border-radius:50%;background:#cbd5e1;display:block;transition:background 0.15s;';
+
+            const lbl = document.createElement('small');
+            lbl.style.cssText = 'color:#64748b;font-size:11px;font-weight:500;';
+            lbl.textContent = p.t;
+
+            btn.appendChild(dot);
+            btn.appendChild(lbl);
+            btn.addEventListener('click', () => {
+                slider.value = String(p.v);
+                value.textContent = slider.value + ' từ/phút';
+                updateActive();
+            });
+            return btn;
+        }
+
+        presets.forEach(p => presetsRow.appendChild(makePreset(p)));
+
+        function updateActive() {
+            const all = presetsRow.querySelectorAll('button');
+            const cur = parseInt(slider.value, 10);
+            let best = null; let bestDiff = Infinity;
+            all.forEach(n => {
+                const v = parseInt(n.getAttribute('data-value'), 10) || 0;
+                const diff = Math.abs(v - cur);
+                if (diff < bestDiff) { bestDiff = diff; best = n; }
+            });
+            all.forEach(n => {
+                const dot = n.querySelector('.dot');
+                if (n === best) { if (dot) dot.style.background = 'linear-gradient(135deg,#6366f1,#8b5cf6)'; }
+                else { if (dot) dot.style.background = '#cbd5e1'; }
+            });
+        }
+
+        slider.addEventListener('input', () => { value.textContent = slider.value + ' từ/phút'; updateActive(); });
+
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'margin-top:1rem;display:flex;justify-content:center;gap:0.75rem;';
+
+        const startBtn = document.createElement('button');
+        startBtn.className = 'btn btn-primary';
+        startBtn.innerHTML = '<i class="fas fa-play"></i> Bắt đầu';
+        startBtn.addEventListener('click', () => {
+            const chosen = parseInt(slider.value, 10) || initialSpeed;
+            document.body.removeChild(modal);
+            if (typeof onConfirm === 'function') onConfirm(chosen);
+        });
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-outline';
+        cancelBtn.textContent = 'Hủy';
+        cancelBtn.addEventListener('click', () => document.body.removeChild(modal));
+
+        btnRow.appendChild(startBtn);
+        btnRow.appendChild(cancelBtn);
+
+        card.appendChild(title);
+        card.appendChild(subtitle);
+        card.appendChild(slider);
+        card.appendChild(value);
+        card.appendChild(presetsRow);
+        card.appendChild(btnRow);
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+
+        slider.focus();
+        updateActive();
+    }
+</script>
+{% endblock %}

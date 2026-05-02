@@ -5,8 +5,7 @@ import os
 import hashlib
 
 from config.database import db
-from models.document import Document
-from models.reading_session import ReadingSession
+from backend.models import Document, ReadingSession
 from services.file_handler import FileHandler
 from services.text_processor import TextProcessor
 from utils.timezone import get_request_tz_name, get_request_tz_offset
@@ -17,7 +16,28 @@ reading_bp = Blueprint('reading', __name__, url_prefix='/reading')
 @reading_bp.route('/reader')
 @login_required
 def reader():
-    return render_template('reading/reader.html')
+    doc_id = request.args.get("doc_id")
+    speed = request.args.get("speed", 200)
+
+    # Nếu có doc_id thì verify quyền sở hữu, nhưng không 404 cứng
+    doc = None
+    if doc_id:
+        try:
+            doc = Document.query.filter(
+                Document.id == int(doc_id),
+                db.or_(
+                    Document.user_id == current_user.id,
+                    Document.class_id != None
+                )
+            ).first()
+        except (ValueError, TypeError):
+            doc = None
+
+    return render_template(
+        "reading/reader.html",
+        doc=doc,
+        speed=speed
+    )
 
 @reading_bp.route('/train')
 @login_required
@@ -101,7 +121,14 @@ def upload():
 @reading_bp.route('/load-document/<int:doc_id>')
 @login_required
 def load_document(doc_id):
-    doc = Document.query.filter_by(id=doc_id, user_id=current_user.id).first()
+    # Cho phép đọc tài liệu cá nhân của user HOẶC tài liệu thuộc lớp học
+    doc = Document.query.filter(
+        Document.id == doc_id,
+        db.or_(
+            Document.user_id == current_user.id,
+            Document.class_id != None
+        )
+    ).first()
 
     if not doc:
         return jsonify({'error': 'Không tìm thấy tài liệu!'}), 404

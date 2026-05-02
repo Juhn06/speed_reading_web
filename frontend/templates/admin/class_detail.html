@@ -1,0 +1,137 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Chi tiết lớp{% endblock %}
+
+{% block content %}
+
+<div class="admin-dashboard">
+
+    <!-- HEADER -->
+    <div class="top-bar">
+        <a href="javascript:history.back()" class="back-btn">⬅</a>
+        <h2>{{ class_obj.name }}</h2>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="upload-box">
+        <form method="POST" enctype="multipart/form-data"
+              action="{{ url_for('admin.upload_to_class', class_id=class_obj.id) }}">
+            <input type="file" name="file" required>
+            <button type="submit">Upload bài học</button>
+        </form>
+    </div>
+
+    <!-- DANH SÁCH BÀI HỌC -->
+    <div class="lesson-grid">
+        {% for d in documents %}
+        <div class="lesson-card">
+
+            <div class="lesson-icon">📄</div>
+
+            <div class="lesson-body">
+                <h4>{{ d.original_filename }}</h4>
+                <p>{{ d.word_count }} từ</p>
+            </div>
+
+            <!-- ACTIONS: Đọc + Xóa -->
+            <div style="display:flex; gap:8px; align-items:stretch; margin-top:10px;">
+
+                <button onclick="openSpeedModal({{ d.id }})"
+                        style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+                               padding: 9px 0; border-radius:8px; font-size:14px; font-weight:600;
+                               background: linear-gradient(135deg,#667eea,#764ba2); color:white;
+                               border:none; cursor:pointer; transition: opacity 0.15s;"
+                        onmouseover="this.style.opacity='0.88'"
+                        onmouseout="this.style.opacity='1'">
+                    <i class="fas fa-book-reader"></i> Đọc ngay
+                </button>
+
+                <form method="POST"
+                      action="{{ url_for('admin.delete_class_document', class_id=class_obj.id, doc_id=d.id) }}"
+                      onsubmit="return confirm('Xóa bài học {{ d.original_filename }}?')"
+                      style="margin:0; display:flex;">
+                    <button type="submit"
+                            style="display:flex; align-items:center; justify-content:center; gap:5px;
+                                   padding: 9px 14px; border-radius:8px; font-size:14px; font-weight:600;
+                                   background:#fee2e2; color:#dc2626; border:none; cursor:pointer;
+                                   transition: all 0.15s;"
+                            onmouseover="this.style.background='#fca5a5'; this.style.color='#991b1b';"
+                            onmouseout="this.style.background='#fee2e2'; this.style.color='#dc2626';">
+                        <i class="fas fa-trash-alt" style="font-size:13px;"></i> Xóa
+                    </button>
+                </form>
+
+            </div>
+
+        </div>
+        {% else %}
+            <p>Chưa có bài học</p>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- ===== MODAL ===== -->
+<div id="speedModal" class="speed-overlay">
+    <div class="speed-box">
+        <h2>Chọn tốc độ đọc</h2>
+        <input type="range" id="speedSlider" min="100" max="600" value="200">
+        <p id="speedValue">200 từ/phút</p>
+        <div class="speed-presets">
+            <span data-speed="150">Chậm</span>
+            <span data-speed="250" class="active">Vừa</span>
+            <span data-speed="350">Nhanh</span>
+            <span data-speed="500">Rất nhanh</span>
+        </div>
+        <div class="speed-actions">
+            <button onclick="startReading()">▶ Bắt đầu</button>
+            <button onclick="closeModal()">Hủy</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentDocId = null;
+
+function openSpeedModal(docId) {
+    currentDocId = docId;
+    document.getElementById("speedModal").style.display = "flex";
+}
+
+function closeModal() {
+    document.getElementById("speedModal").style.display = "none";
+}
+
+const slider = document.getElementById("speedSlider");
+const presets = document.querySelectorAll(".speed-presets span");
+const valueText = document.getElementById("speedValue");
+
+presets.forEach(p => {
+    p.onclick = function () {
+        const speed = parseInt(this.getAttribute("data-speed"));
+        slider.value = speed;
+        valueText.innerText = speed + " từ/phút";
+        setActive(speed);
+    }
+});
+
+slider.oninput = function () {
+    const val = parseInt(this.value);
+    valueText.innerText = val + " từ/phút";
+    setActive(val);
+};
+
+function setActive(speed) {
+    presets.forEach(p => p.classList.remove("active"));
+    if (speed < 200) presets[0].classList.add("active");
+    else if (speed < 300) presets[1].classList.add("active");
+    else if (speed < 450) presets[2].classList.add("active");
+    else presets[3].classList.add("active");
+}
+
+function startReading() {
+    window.location.href = `/reading/reader?doc_id=${currentDocId}&speed=${slider.value}`;
+}
+</script>
+
+{% endblock %}

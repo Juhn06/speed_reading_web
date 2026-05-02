@@ -1,0 +1,102 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}Quản lý lớp học{% endblock %}
+
+{% block content %}
+
+<div class="admin-dashboard">
+
+    <h2>Lớp học</h2>
+
+    <!-- TOP BAR -->
+    <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <button onclick="showForm()">+ Tạo lớp học</button>
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="🔍 Tìm lớp học..."
+            onkeyup="filterClasses()"
+            style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;"
+        >
+    </div>
+
+    <!-- FORM TẠO LỚP -->
+    <div id="createForm" style="display:none; margin-bottom:20px;">
+        <form method="POST" action="{{ url_for('admin.create_class') }}">
+            <input name="name" placeholder="Tên lớp..." required>
+            <button type="submit">Lưu</button>
+        </form>
+    </div>
+
+    <!-- LIST -->
+    <div class="class-grid">
+        {% for c in classes %}
+        <div class="class-card" data-name="{{ c.name|lower }}">
+
+            <div class="class-header">📚</div>
+
+            <div class="class-body">
+                <h3>{{ c.name }}</h3>
+                <p>{{ c.documents|length }} bài học</p>
+            </div>
+
+            <!-- ACTIONS: Vào lớp + Xóa -->
+            <div style="padding: 0 12px 14px; display:flex; gap:8px; align-items:stretch;">
+
+                <a href="{{ url_for('admin.class_detail', class_id=c.id) }}"
+                   style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+                          padding: 9px 0; border-radius:8px; font-size:14px; font-weight:600;
+                          background: linear-gradient(135deg,#667eea,#764ba2); color:white;
+                          text-decoration:none; transition: opacity 0.15s;"
+                   onmouseover="this.style.opacity='0.88'"
+                   onmouseout="this.style.opacity='1'">
+                    <i class="fas fa-door-open"></i> Vào lớp
+                </a>
+
+                <form method="POST"
+                      action="{{ url_for('admin.delete_class', class_id=c.id) }}"
+                      onsubmit="return confirm('Xóa lớp {{ c.name }}? Tất cả bài học trong lớp cũng sẽ bị xóa!')"
+                      style="margin:0; display:flex;">
+                    <button type="submit"
+                            style="display:flex; align-items:center; justify-content:center; gap:5px;
+                                   padding: 9px 14px; border-radius:8px; font-size:14px; font-weight:600;
+                                   background:#fee2e2; color:#dc2626; border:none; cursor:pointer;
+                                   transition: all 0.15s;"
+                            onmouseover="this.style.background='#fca5a5'; this.style.color='#991b1b';"
+                            onmouseout="this.style.background='#fee2e2'; this.style.color='#dc2626';">
+                        <i class="fas fa-trash-alt" style="font-size:13px;"></i> Xóa
+                    </button>
+                </form>
+
+            </div>
+
+        </div>
+        {% else %}
+            <p>Chưa có lớp học</p>
+        {% endfor %}
+    </div>
+
+    <p id="noResult" style="display:none; margin-top:10px;">Không tìm thấy lớp</p>
+
+</div>
+
+<script>
+function showForm() {
+    const form = document.getElementById('createForm');
+    form.style.display = (form.style.display === 'none') ? 'block' : 'none';
+}
+
+function filterClasses() {
+    const keyword = document.getElementById("searchInput").value.toLowerCase();
+    const cards = document.querySelectorAll(".class-card");
+    let found = false;
+    cards.forEach(card => {
+        const name = card.getAttribute("data-name");
+        if (name.includes(keyword)) { card.style.display = ""; found = true; }
+        else { card.style.display = "none"; }
+    });
+    document.getElementById("noResult").style.display = found ? "none" : "block";
+}
+</script>
+
+{% endblock %}

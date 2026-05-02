@@ -1,9 +1,6 @@
 from flask import Blueprint, render_template
-
 from config.database import db
-from models.user import User
-from models.reading_session import ReadingSession
-from models.document import Document
+from backend.models import User, Document, ReadingSession
 
 main_bp = Blueprint('main', __name__)
 

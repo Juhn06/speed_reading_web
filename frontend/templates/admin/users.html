@@ -1,143 +1,281 @@
-{% extends "base.html" %}
+{% extends 'admin/base.html' %}
 
-{% block title %}Quản lý Users - Admin{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
-{% endblock %}
+{% block title %}Quản lý người dùng{% endblock %}
 
 {% block content %}
-<div class="admin-users-page">
-    <div class="container">
-        
-        <div class="page-header">
-            <h1><i class="fas fa-users"></i> Quản lý người dùng</h1>
-            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Quay lại Dashboard
-            </a>
+<div class="admin-dashboard">
+
+    <!-- HEADER -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+        <h2 style="margin:0;"><i class="fas fa-users" style="color:#6366f1; margin-right:10px;"></i> Quản lý người dùng</h2>
+        <span style="background:#eef2ff; color:#6366f1; padding:6px 14px; border-radius:20px; font-size:13px; font-weight:600;">
+            {{ pagination.total }} tài khoản
+        </span>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div style="background:white; border-radius:12px; padding:16px 20px; margin-bottom:20px;
+                box-shadow:0 2px 8px rgba(0,0,0,0.06); display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+
+        <!-- Search -->
+        <div style="position:relative; flex:1; min-width:220px;">
+            <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:14px;"></i>
+            <input type="text" id="searchInput" placeholder="Tìm username hoặc email..."
+                   value="{{ filters.q }}"
+                   style="width:100%; padding:9px 14px 9px 36px; border-radius:8px; border:1px solid #e2e8f0;
+                          font-size:14px; outline:none; background:#f8faff; box-sizing:border-box;"
+                   onfocus="this.style.borderColor='#6366f1'; this.style.boxShadow='0 0 0 3px rgba(99,102,241,0.1)';"
+                   onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none';">
         </div>
 
-        
-        <div class="admin-toolbar card">
-            <div class="card-body">
-                <div class="toolbar-grid">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text"
-                               id="searchInput"
-                               placeholder="Tìm theo username hoặc email..."
-                               class="form-control"
-                               value="{{ filters.q }}">
-                    </div>
+        <!-- Role filter -->
+        <select id="roleFilter"
+                style="padding:9px 14px; border-radius:8px; border:1px solid #e2e8f0;
+                       font-size:14px; background:#f8faff; outline:none; cursor:pointer;">
+            <option value="all" {% if filters.role == 'all' %}selected{% endif %}>Tất cả vai trò</option>
+            <option value="user" {% if filters.role == 'user' %}selected{% endif %}>User</option>
+            <option value="admin" {% if filters.role == 'admin' %}selected{% endif %}>Admin</option>
+        </select>
 
-                    <select class="form-control" id="roleFilter">
-                        <option value="all" {% if filters.role == 'all' %}selected{% endif %}>Tất cả vai trò</option>
-                        <option value="user" {% if filters.role == 'user' %}selected{% endif %}>User</option>
-                        <option value="admin" {% if filters.role == 'admin' %}selected{% endif %}>Admin</option>
-                    </select>
+        <!-- Sort -->
+        <select id="sortBy"
+                style="padding:9px 14px; border-radius:8px; border:1px solid #e2e8f0;
+                       font-size:14px; background:#f8faff; outline:none; cursor:pointer;">
+            <option value="newest" {% if filters.sort == 'newest' %}selected{% endif %}>Mới nhất</option>
+            <option value="oldest" {% if filters.sort == 'oldest' %}selected{% endif %}>Cũ nhất</option>
+        </select>
 
-                    <select class="form-control" id="sortBy">
-                        <option value="newest" {% if filters.sort == 'newest' %}selected{% endif %}>Mới nhất</option>
-                        <option value="oldest" {% if filters.sort == 'oldest' %}selected{% endif %}>Cũ nhất</option>
-                        <option value="most_active" {% if filters.sort == 'most_active' %}selected{% endif %}>Hoạt động nhiều nhất</option>
-                    </select>
+        <button onclick="applyFilters()"
+                style="padding:9px 20px; border-radius:8px; border:none; cursor:pointer; font-size:14px;
+                       font-weight:600; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white;">
+            <i class="fas fa-search"></i> Tìm
+        </button>
+    </div>
 
-                    <button class="btn btn-primary toolbar-action" id="searchButton" type="button">
-                        <i class="fas fa-search"></i> Tìm
-                    </button>
-                </div>
-            </div>
-        </div>
+    <!-- TABLE -->
+    <div style="background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+            <thead>
+                <tr style="background:#f8faff; border-bottom:2px solid #e8edf5;">
+                    <th style="padding:14px 16px; text-align:left; color:#64748b; font-weight:600;">#</th>
+                    <th style="padding:14px 16px; text-align:left; color:#64748b; font-weight:600;">Người dùng</th>
+                    <th style="padding:14px 16px; text-align:left; color:#64748b; font-weight:600;">Email</th>
+                    <th style="padding:14px 16px; text-align:left; color:#64748b; font-weight:600;">Ngày tham gia</th>
+                    <th style="padding:14px 16px; text-align:left; color:#64748b; font-weight:600;">Vai trò</th>
+                    <th style="padding:14px 16px; text-align:center; color:#64748b; font-weight:600;">Phiên đọc</th>
+                    <th style="padding:14px 16px; text-align:center; color:#64748b; font-weight:600;">Tổng từ</th>
+                    <th style="padding:14px 16px; text-align:center; color:#64748b; font-weight:600;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if pagination.items | length == 0 %}
+                <tr>
+                    <td colspan="8" style="padding:48px; text-align:center; color:#94a3b8;">
+                        <i class="fas fa-search" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
+                        Không tìm thấy tài khoản nào
+                    </td>
+                </tr>
+                {% else %}
+                {% for user in pagination.items %}
+                <tr style="border-bottom:1px solid #f1f5f9; transition:background 0.15s;"
+                    onmouseover="this.style.background='#fafbff'"
+                    onmouseout="this.style.background='white'">
 
-        <div class="admin-table-section card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Ngày tham gia</th>
-                                <th>Vai trò</th>
-                                <th>Phiên đọc</th>
-                                <th>Tổng từ</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if pagination.items|length == 0 %}
-                            <tr>
-                                <td colspan="8" class="empty-cell">
-                                    Không có dữ liệu phù hợp.
-                                </td>
-                            </tr>
-                            {% else %}
-                                {% for user in pagination.items %}
-                                <tr data-role="{{ 'admin' if user.is_admin else 'user' }}"
-                                    data-created="{{ user.created_at.timestamp() | int }}"
-                                    data-sessions="{{ user.get_total_sessions() }}">
-                                <td>{{ user.id }}</td>
-                                <td>
-                                    <div class="user-info">
-                                        <i class="fas fa-user-circle"></i>
-                                        <strong>{{ user.username }}</strong>
-                                    </div>
-                                </td>
-                                <td>{{ user.email }}</td>
-                                <td>{{ user.created_at | local_date }}</td>
-                                <td>
-                                    {% if user.is_admin %}
-                                    <span class="badge badge-admin">
-                                        <i class="fas fa-shield-alt"></i> Admin
-                                    </span>
-                                    {% else %}
-                                    <span class="badge badge-user">
-                                        <i class="fas fa-user"></i> User
-                                    </span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ user.get_total_sessions() }}</td>
-                                <td>{{ "{:,}".format(user.get_total_words_read()) }}</td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="btn btn-sm btn-info" 
-                                                onclick="viewUserDetails({{ user.id }})">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        {% if not user.is_admin %}
-                                        <button class="btn btn-sm btn-danger" 
-                                                onclick="deleteUser({{ user.id }}, '{{ user.username }}')">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                                {% endfor %}
+                    <td style="padding:14px 16px; color:#94a3b8; font-weight:500;">{{ user.id }}</td>
+
+                    <td style="padding:14px 16px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="width:36px; height:36px; border-radius:50%;
+                                        background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                                        display:flex; align-items:center; justify-content:center;
+                                        color:white; font-size:14px; flex-shrink:0;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <strong style="color:#1e293b;">{{ user.username }}</strong>
+                        </div>
+                    </td>
+
+                    <td style="padding:14px 16px; color:#64748b;">{{ user.email }}</td>
+
+                    <td style="padding:14px 16px; color:#64748b;">
+                        {{ user.created_at.strftime('%d/%m/%Y') }}
+                    </td>
+
+                    <td style="padding:14px 16px;">
+                        {% if user.is_admin %}
+                        <span style="background:#fdf4ff; color:#a855f7; padding:4px 10px;
+                                     border-radius:20px; font-size:12px; font-weight:600;">
+                            <i class="fas fa-shield-alt"></i> Admin
+                        </span>
+                        {% else %}
+                        <span style="background:#f0fdf4; color:#16a34a; padding:4px 10px;
+                                     border-radius:20px; font-size:12px; font-weight:600;">
+                            <i class="fas fa-user"></i> User
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding:14px 16px; text-align:center; font-weight:600; color:#1e293b;">
+                        {{ user.get_total_sessions() }}
+                    </td>
+
+                    <td style="padding:14px 16px; text-align:center; font-weight:600; color:#1e293b;">
+                        {{ "{:,}".format(user.get_total_words_read()) }}
+                    </td>
+
+                    <td style="padding:14px 16px; text-align:center;">
+                        <div style="display:flex; gap:6px; justify-content:center;">
+                            <button onclick="viewUserDetails({{ user.id }})"
+                                    style="padding:6px 12px; border-radius:7px; border:none; cursor:pointer;
+                                           background:#eff6ff; color:#3b82f6; font-size:13px; font-weight:500;"
+                                    title="Xem chi tiết">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if not user.is_admin %}
+                            <button onclick="deleteUser({{ user.id }}, '{{ user.username }}')"
+                                    style="padding:6px 12px; border-radius:7px; border:none; cursor:pointer;
+                                           background:#fee2e2; color:#dc2626; font-size:13px; font-weight:500;"
+                                    title="Xóa tài khoản">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
                             {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
 
-        <div class="modal" id="userDetailModal" aria-hidden="true">
-            <div class="modal-overlay" data-modal-close></div>
-            <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="userDetailTitle">
-                <div class="modal-header">
-                    <h3 id="userDetailTitle">Chi tiết người dùng</h3>
-                    <button class="modal-close" type="button" data-modal-close aria-label="Đóng">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body" id="userDetailBody">
-                    <div class="modal-loading">Đang tải dữ liệu...</div>
-                </div>
-            </div>
-        </div>
+        <!-- PAGINATION -->
+        {% if pagination.pages > 1 %}
+        <div style="display:flex; align-items:center; justify-content:center; gap:6px; padding:16px;">
+            {% if pagination.has_prev %}
+            <a href="?page={{ pagination.prev_num }}&q={{ filters.q }}&role={{ filters.role }}&sort={{ filters.sort }}"
+               style="padding:7px 14px; border-radius:8px; background:#f1f5f9; color:#64748b; text-decoration:none; font-size:14px;">
+                ← Trước
+            </a>
+            {% endif %}
 
-        {% include 'components/pagination.html' %}
+            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                <a href="?page={{ p }}&q={{ filters.q }}&role={{ filters.role }}&sort={{ filters.sort }}"
+                   style="padding:7px 12px; border-radius:8px; text-decoration:none; font-size:14px; font-weight:600;
+                          {% if p == pagination.page %}background:linear-gradient(135deg,#6366f1,#8b5cf6); color:white;
+                          {% else %}background:#f1f5f9; color:#64748b;{% endif %}">
+                    {{ p }}
+                </a>
+                {% else %}
+                <span style="color:#94a3b8;">…</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <a href="?page={{ pagination.next_num }}&q={{ filters.q }}&role={{ filters.role }}&sort={{ filters.sort }}"
+               style="padding:7px 14px; border-radius:8px; background:#f1f5f9; color:#64748b; text-decoration:none; font-size:14px;">
+                Tiếp →
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 </div>
+
+<!-- MODAL CHI TIẾT USER -->
+<div id="userModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
+     z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:16px; padding:28px; width:480px; max-width:90%;
+                box-shadow:0 20px 60px rgba(0,0,0,0.2); position:relative;">
+        <button onclick="closeModal()"
+                style="position:absolute; top:16px; right:16px; background:none; border:none;
+                       font-size:18px; cursor:pointer; color:#94a3b8;">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3 style="margin:0 0 20px; color:#1e293b;">Chi tiết người dùng</h3>
+        <div id="modalBody">Đang tải...</div>
+    </div>
+</div>
+
+<script>
+function applyFilters() {
+    const q = document.getElementById('searchInput').value;
+    const role = document.getElementById('roleFilter').value;
+    const sort = document.getElementById('sortBy').value;
+    window.location.href = `?q=${encodeURIComponent(q)}&role=${role}&sort=${sort}&page=1`;
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') applyFilters();
+});
+
+async function viewUserDetails(userId) {
+    const modal = document.getElementById('userModal');
+    const body = document.getElementById('modalBody');
+    modal.style.display = 'flex';
+    body.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:20px;">Đang tải...</div>';
+
+    try {
+        const res = await fetch(`/admin/users/${userId}/detail`);
+        const d = await res.json();
+        body.innerHTML = `
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">
+                <div style="width:52px; height:52px; border-radius:50%;
+                            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+                            display:flex; align-items:center; justify-content:center;
+                            color:white; font-size:20px;">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <div style="font-size:18px; font-weight:700; color:#1e293b;">${d.username}</div>
+                    <div style="color:#64748b; font-size:13px;">${d.email}</div>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                ${statBox('Phiên đọc', d.stats.total_sessions, 'fas fa-book-open', '#eef2ff', '#6366f1')}
+                ${statBox('Hoàn thành', d.stats.completed_sessions, 'fas fa-check-circle', '#f0fdf4', '#16a34a')}
+                ${statBox('Tổng từ', d.stats.total_words.toLocaleString(), 'fas fa-font', '#fef3c7', '#f59e0b')}
+                ${statBox('Tốc độ TB', d.stats.avg_speed + ' từ/phút', 'fas fa-tachometer-alt', '#eff6ff', '#3b82f6')}
+                ${statBox('Tài liệu', d.stats.total_documents, 'fas fa-folder', '#fdf4ff', '#a855f7')}
+                ${statBox('Tham gia', d.created_at, 'fas fa-calendar', '#f8faff', '#64748b')}
+            </div>
+        `;
+    } catch(e) {
+        body.innerHTML = '<div style="color:#ef4444; text-align:center;">Lỗi tải dữ liệu</div>';
+    }
+}
+
+function statBox(label, value, icon, bg, color) {
+    return `<div style="background:${bg}; border-radius:10px; padding:14px; display:flex; align-items:center; gap:10px;">
+        <i class="${icon}" style="color:${color}; font-size:18px; width:22px; text-align:center;"></i>
+        <div>
+            <div style="font-size:11px; color:#94a3b8; font-weight:500; margin-bottom:2px;">${label}</div>
+            <div style="font-size:15px; font-weight:700; color:#1e293b;">${value}</div>
+        </div>
+    </div>`;
+}
+
+function closeModal() {
+    document.getElementById('userModal').style.display = 'none';
+}
+
+document.getElementById('userModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+async function deleteUser(userId, username) {
+    if (!confirm(`Xóa tài khoản "${username}"? Hành động này không thể hoàn tác!`)) return;
+
+    try {
+        const res = await fetch(`/admin/users/${userId}/delete`, { method: 'POST' });
+        const d = await res.json();
+        if (d.success) {
+            location.reload();
+        } else {
+            alert(d.error || 'Lỗi xóa tài khoản');
+        }
+    } catch(e) {
+        alert('Lỗi kết nối');
+    }
+}
+</script>
 {% endblock %}

@@ -1,5 +1,3 @@
-
-
 const SETTINGS_KEY = 'rsvp_settings_v2';
 const DEFAULT_SETTINGS = {
     orpEnabled: true,
@@ -16,7 +14,19 @@ const ADAPTIVE_EVERY_WORDS = 40;
 const ADAPTIVE_MAX_EXTRA = 180;
 
 let words = JSON.parse(localStorage.getItem('words')) || [];
-let baseSpeed = clamp(parseInt(localStorage.getItem('speed'), 10) || 200, SPEED_MIN, SPEED_MAX);
+
+// ✅ FIX 1: Đọc speed từ URL params trước, fallback về localStorage
+function getInitialSpeed() {
+    const params = new URLSearchParams(window.location.search);
+    const urlSpeed = parseInt(params.get('speed'), 10);
+    if (!isNaN(urlSpeed)) {
+        localStorage.setItem('speed', String(urlSpeed)); // sync lại localStorage
+        return clamp(urlSpeed, SPEED_MIN, SPEED_MAX);
+    }
+    return clamp(parseInt(localStorage.getItem('speed'), 10) || 200, SPEED_MIN, SPEED_MAX);
+}
+
+let baseSpeed = getInitialSpeed();
 let currentSpeed = baseSpeed;
 let filename = localStorage.getItem('filename') || 'Tai lieu';
 let docId = localStorage.getItem('doc_id');
@@ -45,16 +55,22 @@ document.addEventListener('DOMContentLoaded', () => {
 function checkPendingShowChooser() {
     try {
         const pending = localStorage.getItem('pendingShowCompletionSpeedChooser');
+
         if (pending === '1') {
             localStorage.removeItem('pendingShowCompletionSpeedChooser');
-            // show completion overlay and the internal speed selection UI
+
+            // show overlay
             if (dom.completionOverlay) dom.completionOverlay.classList.add('show');
             if (dom.completionSpeedSelection) dom.completionSpeedSelection.style.display = 'block';
-            dom.chooserSource = 'documents';
+
+            const fromPage = localStorage.getItem('from_page') || 'documents';
+            dom.chooserSource = fromPage;
+
+            // set speed
             const cur = Math.round(baseSpeed || 200);
             if (dom.completionSpeedSlider) dom.completionSpeedSlider.value = cur;
             if (dom.completionSpeedValue) dom.completionSpeedValue.textContent = cur;
-            // update presets visual state
+
             activateClosestCompletionPreset(cur);
         }
     } catch (e) {
@@ -204,15 +220,26 @@ function bindEvents() {
     }
     if (dom.completionCancelBtn) {
         dom.completionCancelBtn.addEventListener('click', () => {
-            // If chooser was opened from Documents, navigate back to documents list
-            if (dom.chooserSource === 'documents') {
-                localStorage.removeItem('pendingShowCompletionSpeedChooser');
-                dom.chooserSource = null;
+            const from = dom.chooserSource;
+
+            localStorage.removeItem('pendingShowCompletionSpeedChooser');
+            localStorage.removeItem('from_page');
+
+            if (from === 'documents') {
                 window.location.href = '/user/documents';
                 return;
             }
-            // otherwise hide the entire overlay and restore UI
-            dom.chooserSource = null;
+
+            if (from === 'dashboard') {
+                window.location.href = '/user/dashboard';
+                return;
+            }
+
+            if (from === 'history') {
+                window.location.href = '/user/history';
+                return;
+            }
+
             hideCompletionOverlay();
         });
     }
@@ -234,14 +261,15 @@ function activateClosestCompletionPreset(currentValue) {
     presets.forEach(p => {
         const dot = p.querySelector('.dot');
         if (p === closest) {
-            p.classList.add('active'); p.setAttribute('aria-pressed','true'); if (dot) dot.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
-        } else { p.classList.remove('active'); p.setAttribute('aria-pressed','false'); if (dot) dot.style.background = '#cbd5e1'; }
+            p.classList.add('active'); p.setAttribute('aria-pressed', 'true'); if (dot) dot.style.background = 'linear-gradient(135deg,#667eea,#764ba2)';
+        } else { p.classList.remove('active'); p.setAttribute('aria-pressed', 'false'); if (dot) dot.style.background = '#cbd5e1'; }
     });
-    // (no textual range label in completion overlay anymore)
 }
 
 
 function initializeReader() {
+    isRunning = false;
+    isPaused = false;
     syncSettingsToUI();
     updatePunctuationFactorLabel();
     updateSpeedDisplay();
@@ -260,8 +288,13 @@ function initializeReader() {
     }
 
     setIdleDisplay();
-    // check if we need to show chooser immediately (navigated from Documents)
-    checkPendingShowChooser();
+
+    const pending = localStorage.getItem('pendingShowCompletionSpeedChooser');
+
+    if (pending === '1') {
+        checkPendingShowChooser();
+        return;
+    }
 }
 
 function setIdleDisplay() {
@@ -272,6 +305,7 @@ function setIdleDisplay() {
     if (dom.progress) dom.progress.textContent = '0';
     if (dom.percentage) dom.percentage.textContent = '0';
 }
+
 function togglePlayPause() {
     if (words.length === 0) {
         alert('Không có dữ liệu đọc.');
@@ -313,12 +347,14 @@ function runNextWord() {
         return;
     }
 
+    // ✅ FIX 3: Gọi adaptive speed đúng chỗ
+    applyAdaptiveSpeedIfNeeded();
+
     const word = words[currentIndex];
     displayWord(word);
     currentIndex += 1;
     updateProgress();
     updatePercentage();
-    applyAdaptiveSpeedIfNeeded();
 
     const delay = computeDelay(word);
     timeoutId = setTimeout(runNextWord, delay);
@@ -392,28 +428,19 @@ function pivotByLength(length) {
     return 4;
 }
 
+// ✅ FIX 2: computeDelay tính đúng delay có tính punctuation pause và long word pause
 function computeDelay(word) {
-    let delay = 60000 / Math.max(currentSpeed, 60);
+    let delay = Math.round(60000 / currentSpeed);
 
-    if (settings.longWordPause) {
-        const cleanedLength = getTimingLength(word);
-        if (cleanedLength >= 10) {
-            delay *= 1.2;
-        }
-        if (cleanedLength >= 14) {
-            delay *= 1.35;
-        }
+    if (settings.punctuationPause && /[.,!?;:…]/.test(word)) {
+        delay = Math.round(delay * settings.punctuationFactor);
     }
 
-    if (settings.punctuationPause) {
-        if (/[.!?]["')\]]*$/.test(word)) {
-            delay *= settings.punctuationFactor;
-        } else if (/[,;:]["')\]]*$/.test(word)) {
-            delay *= Math.max(1.15, settings.punctuationFactor - 0.45);
-        }
+    if (settings.longWordPause && getTimingLength(word) >= 8) {
+        delay = Math.round(delay * 1.3);
     }
 
-    return Math.max(30, Math.round(delay));
+    return delay;
 }
 
 function getTimingLength(word) {
@@ -684,7 +711,7 @@ function showCompletionOverlay({ totalWords: total, wordsRead, durationSeconds, 
     if (completeTotal) completeTotal.textContent = total;
     if (completeRead) completeRead.textContent = wordsRead;
     if (completeTime) completeTime.textContent = formatDuration(durationSeconds);
-    if (completeSpeed) completeSpeed.textContent = `${speed} tu/phut`;
+    if (completeSpeed) completeSpeed.textContent = `${baseSpeed} từ/phút`;
 
     dom.completionOverlay.classList.add('show');
     launchConfetti(dom.confettiLayer);
@@ -730,7 +757,6 @@ function hideCompletionOverlay() {
     if (dom.documentContent) {
         dom.documentContent.textContent = '';
     }
-    // clear any displayed content
     // restore header and actions visibility (in case they were hidden by 'Đọc lại')
     try {
         if (dom.completionHeader) dom.completionHeader.style.display = '';
@@ -741,8 +767,6 @@ function hideCompletionOverlay() {
     }
 }
 
-/* horizontal scroller removed - using native scrollbars and simple content rendering */
-
 function launchConfetti(confettiLayer) {
     confettiLayer.innerHTML = '';
 
@@ -751,19 +775,18 @@ function launchConfetti(confettiLayer) {
     confettiLayer.appendChild(canvas);
 
     const rect = confettiLayer.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
-        return;
-    }
+    if (rect.width === 0 || rect.height === 0) return;
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    // ✅ DPR capped at 1 để tránh lag
+    const dpr = 1;
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     canvas.style.width = `${rect.width}px`;
     canvas.style.height = `${rect.height}px`;
 
     const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.globalCompositeOperation = 'lighter';
+    // ✅ Bỏ globalCompositeOperation 'lighter' — gây lag nặng
+    ctx.globalCompositeOperation = 'source-over';
 
     const palette = [
         [255, 99, 71],
@@ -784,7 +807,7 @@ function launchConfetti(confettiLayer) {
 
     function createBurst() {
         const color = palette[Math.floor(Math.random() * palette.length)];
-        const count = 140 + Math.floor(Math.random() * 40);
+        const count = 120; // ✅ giảm từ 140-180 xuống 120
         const particles = [];
         const offsetX = (Math.random() - 0.5) * 40;
         const offsetY = (Math.random() - 0.5) * 40;
@@ -800,7 +823,7 @@ function launchConfetti(confettiLayer) {
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
                 alpha: 1,
-                decay: 0.008 + Math.random() * 0.012
+                decay: 0.010 + Math.random() * 0.012
             });
         }
 
@@ -810,7 +833,7 @@ function launchConfetti(confettiLayer) {
             originX,
             originY,
             flash: 1,
-            lineWidth: 1 + Math.random() * 1.2
+            lineWidth: 1.5
         };
     }
 
@@ -821,6 +844,7 @@ function launchConfetti(confettiLayer) {
     }
 
     let running = true;
+    let rafId;
     const maxDuration = 3000;
     const start = performance.now();
 
@@ -832,34 +856,30 @@ function launchConfetti(confettiLayer) {
         for (const burst of bursts) {
             const [r, g, b] = burst.color;
             ctx.lineWidth = burst.lineWidth;
-            ctx.shadowBlur = 6;
-            ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.6)`;
+            // ✅ Bỏ shadowBlur hoàn toàn — đây là nguyên nhân lag chính
+            ctx.shadowBlur = 0;
 
             if (burst.flash > 0) {
                 const radius = 14 + (1 - burst.flash) * 32;
                 const gradient = ctx.createRadialGradient(
-                    burst.originX,
-                    burst.originY,
-                    0,
-                    burst.originX,
-                    burst.originY,
-                    radius
+                    burst.originX, burst.originY, 0,
+                    burst.originX, burst.originY, radius
                 );
-                gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${0.8 * burst.flash})`);
+                gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${0.7 * burst.flash})`);
                 gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
                 ctx.arc(burst.originX, burst.originY, radius, 0, Math.PI * 2);
                 ctx.fill();
-                burst.flash -= 0.12;
+                burst.flash -= 0.15;
             }
 
+            // ✅ Batch tất cả particles cùng màu vào 1 beginPath
+            ctx.beginPath();
             for (const particle of burst.particles) {
-                if (particle.alpha <= 0) {
-                    continue;
-                }
-
+                if (particle.alpha <= 0) continue;
                 alive = true;
+
                 const prevX = particle.x;
                 const prevY = particle.y;
 
@@ -869,26 +889,26 @@ function launchConfetti(confettiLayer) {
                 particle.y += particle.vy * 2.8;
                 particle.alpha -= particle.decay;
 
-                const alpha = Math.max(particle.alpha, 0);
-                ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-                ctx.beginPath();
                 ctx.moveTo(prevX, prevY);
                 ctx.lineTo(particle.x, particle.y);
-                ctx.stroke();
             }
+            const alpha = 0.85;
+            ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            ctx.stroke();
         }
 
         if ((alive || elapsed < maxDuration) && running) {
-            requestAnimationFrame(animate);
+            rafId = requestAnimationFrame(animate);
         } else {
             confettiLayer.innerHTML = '';
         }
     }
 
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
 
     setTimeout(() => {
         running = false;
+        cancelAnimationFrame(rafId);
     }, maxDuration + 200);
 }
 

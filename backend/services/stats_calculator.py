@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from config.database import db
-from models.reading_session import ReadingSession
+from backend.models import ReadingSession
 
 class StatsCalculator:
 
@@ -47,8 +47,8 @@ class StatsCalculator:
 
     @staticmethod
     def get_system_stats():
-        from models.user import User
-        from models.document import Document
+        from backend.models import User
+        from backend.models import Document
 
         total_users = User.query.count()
         total_sessions = ReadingSession.query.count()

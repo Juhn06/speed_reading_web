@@ -287,8 +287,8 @@
         background: #f8fafc;
         border-radius: 6px;
         margin-right: 4px; /* tiny inset so scrollbar track is visible inside rounded corner */
-        white-space: pre; /* preserve newlines and spaces */
-        word-break: normal;
+        white-space: pre-wrap;
+        word-break: break-word;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Segoe UI Mono', monospace;
         color: #0f172a;
         font-size: 0.95rem;
@@ -401,7 +401,7 @@
 {% endblock %}
 
 {% block content %}
-<button class="reader-close" type="button" onclick="goBack(true)" aria-label="Thoát">
+<button class="reader-close" type="button" onclick="goBack()" aria-label="Thoát">
     &times;
 </button>
 
@@ -522,7 +522,7 @@
         </div>
         <div id="documentContentPanel" style="display:none; margin-top:1rem; text-align:left; position:relative; width:100%; padding-bottom:12px;">
             <div style="font-weight:700; margin-bottom:0.5rem;">Nội dung tài liệu:</div>
-            <div id="documentContent" style="background:#f8fafc; border-radius:6px; box-sizing:border-box; color:#0f172a; font-size:0.95rem; line-height:1.45; width:100%; white-space:pre; padding:1rem 1.5rem;">
+            <div id="documentContent">
             </div>
         </div>
     </div>
@@ -531,4 +531,84 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/reader.js') }}?v=20260426a"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const overlay = document.getElementById("completionOverlay");
+    const popup = document.getElementById("completionSpeedSelection");
+    const slider = document.getElementById("completionSpeedSlider");
+    const value = document.getElementById("completionSpeedValue");
+    const startBtn = document.getElementById("completionStartBtn");
+    const cancelBtn = document.getElementById("completionCancelBtn");
+
+    // 👉 nếu chưa có speed → hiện popup
+    // 👉 lấy speed từ URL trước
+const urlParams = new URLSearchParams(window.location.search);
+const speedFromUrl = urlParams.get("speed");
+
+// 👉 nếu KHÔNG có speed → hiện popup
+if (!speedFromUrl) {
+    overlay.classList.add("show");
+    popup.style.display = "block";
+} else {
+    // 👉 có speed rồi → dùng luôn
+    localStorage.setItem("speed", speedFromUrl);
+
+    if (typeof startReading === "function") {
+        startReading(parseInt(speedFromUrl));
+    }
+}
+
+    // 👉 slider update
+    if (slider) {
+        slider.addEventListener("input", () => {
+            value.innerText = slider.value;
+        });
+    }
+
+    // 👉 preset
+    document.querySelectorAll("#completionSpeedPresets .preset").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const val = btn.dataset.value;
+            slider.value = val;
+            value.innerText = val;
+        });
+    });
+
+    // 👉 bắt đầu
+    if (startBtn) {
+        startBtn.addEventListener("click", () => {
+            const speed = slider.value;
+
+            localStorage.setItem("speed", speed);
+
+            overlay.classList.remove("show");
+
+            if (typeof startReading === "function") {
+                startReading(parseInt(speed));  
+            }
+        });
+    }
+
+    // 👉 hủy
+    if (cancelBtn) {
+        cancelBtn.addEventListener("click", () => {
+            history.back();
+        });
+    }
+
+});
+</script>
 {% endblock %}
+ 
+<script>
+function goBack(force = false) {
+    // nếu có lịch sử thì quay lại
+    if (document.referrer && !force) {
+        history.back();
+    } else {
+        // fallback nếu user mở trực tiếp
+        window.location.href = "/user/dashboard";
+    }
+}
+</script>

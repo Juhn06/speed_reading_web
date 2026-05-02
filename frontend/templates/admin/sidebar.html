@@ -1,0 +1,68 @@
+<aside class="admin-sidebar">
+
+    <!-- LOGO -->
+    <div class="admin-sidebar-brand">
+        <div class="admin-brand-icon">
+            <i class="fas fa-book-reader"></i>
+        </div>
+        <span class="admin-brand-text">Speed Reading</span>
+    </div>
+
+    <!-- MENU -->
+    <nav class="admin-sidebar-menu">
+
+        <a href="{{ url_for('admin.dashboard') }}"
+           class="admin-sidebar-item {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+            <div class="admin-item-icon" style="background:#eef2ff; color:#6366f1;">
+                <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <span>Bảng điều khiển</span>
+        </a>
+
+        <a href="{{ url_for('admin.classes') }}"
+           class="admin-sidebar-item {% if request.endpoint == 'admin.classes' or request.endpoint == 'admin.class_detail' %}active{% endif %}">
+            <div class="admin-item-icon" style="background:#fef3c7; color:#f59e0b;">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+            <span>Lớp học</span>
+        </a>
+
+        <a href="{{ url_for('admin.users') }}" class="admin-sidebar-item {% if request.endpoint == 'admin.users' %}active{% endif %}">
+            <div class="admin-item-icon" style="background:#eff6ff; color:#3b82f6;">
+                <i class="fas fa-users"></i>
+            </div>
+            <span>Quản lý người dùng</span>
+        </a>
+
+        <a href="{{ url_for('admin.report') }}" class="admin-sidebar-item {% if request.endpoint == 'admin.report' %}active{% endif %}">
+            <div class="admin-item-icon" style="background:#fdf4ff; color:#a855f7;">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <span>Báo cáo</span>
+        </a>
+
+    </nav>
+
+    <!-- FOOTER -->
+    <div class="admin-sidebar-footer">
+
+        <div class="admin-user-card">
+            <div class="admin-user-avatar">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <div class="admin-user-info">
+                <span class="admin-user-name">{{ current_user.username if current_user else 'Admin' }}</span>
+                <span class="admin-user-role">Quản trị viên</span>
+            </div>
+        </div>
+
+        <a href="{{ url_for('auth.logout') }}" class="admin-sidebar-item admin-logout">
+            <div class="admin-item-icon" style="background:#fff1f2; color:#ef4444;">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <span>Đăng xuất</span>
+        </a>
+
+    </div>
+
+</aside>

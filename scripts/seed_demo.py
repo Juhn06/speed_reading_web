@@ -14,9 +14,9 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app import app
 from config.database import db
-from models.user import User
-from models.document import Document
-from models.reading_session import ReadingSession
+from backend.models import User
+from backend.models import Document
+from backend.models import ReadingSession
 
 DEMO_USERS = [
     {

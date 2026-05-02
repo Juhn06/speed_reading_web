@@ -1,310 +1,482 @@
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
-from datetime import datetime, timedelta
-from sqlalchemy import or_
-
+from flask import Blueprint, render_template, abort, request, redirect, url_for, jsonify
+from flask_login import login_required, current_user
+from backend.models import User, Document, ReadingSession, Class
 from config.database import db
-from config.settings import Config
-from models.user import User
-from models.document import Document
-from models.reading_session import ReadingSession
-from services.stats_calculator import StatsCalculator
-from utils.decorators import admin_required
-from utils.timezone import format_local_date, format_local_datetime
+from sqlalchemy import extract
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
+
+# ===== DASHBOARD =====
 @admin_bp.route('/')
 @login_required
-@admin_required
 def dashboard():
-    stats = StatsCalculator.get_system_stats()
+    if not current_user.is_admin:
+        abort(403)
 
-    recent_users = User.query.order_by(User.created_at.desc()).limit(10).all()
+    stats = {
+        'total_users': User.query.count(),
+        'total_docs': Document.query.count(),
+        'total_sessions': ReadingSession.query.count()
+    }
 
-    recent_sessions = ReadingSession.query \
-        .order_by(ReadingSession.created_at.desc()).limit(10).all()
+    recent_users = User.query.order_by(User.id.desc()).limit(5).all()
+    recent_docs = Document.query.order_by(Document.id.desc()).limit(5).all()
 
-    return render_template('admin/dashboard.html',
-                           stats=stats,
-                           recent_users=recent_users,
-                           recent_sessions=recent_sessions)
+    monthly_sessions = []
+    monthly_docs = []
+    monthly_users = []
 
+    for m in range(1, 13):
+        monthly_sessions.append(
+            ReadingSession.query.filter(
+                extract('month', ReadingSession.created_at) == m
+            ).count()
+        )
+        monthly_docs.append(
+            Document.query.filter(
+                extract('month', Document.created_at) == m
+            ).count()
+        )
+        monthly_users.append(
+            User.query.filter(
+                extract('month', User.created_at) == m
+            ).count()
+        )
+
+    completed = ReadingSession.query.filter_by(completed=True).count()
+    uncompleted = ReadingSession.query.filter_by(completed=False).count()
+    classes_count = Class.query.count()
+
+    from datetime import datetime as _dt, timedelta as _td
+    current_year = _dt.utcnow().year
+
+    # New users per day last 7 days
+    today = _dt.utcnow().date()
+    weekly_labels = []
+    weekly_new_users = []
+    for i in range(6, -1, -1):
+        day = today - _td(days=i)
+        cnt = User.query.filter(
+            db.func.date(User.created_at) == day
+        ).count()
+        weekly_labels.append(day.strftime('%d/%m'))
+        weekly_new_users.append(cnt)
+
+    # New users per day last 30 days
+    monthly_labels = []
+    monthly_new_users = []
+    for i in range(29, -1, -1):
+        day = today - _td(days=i)
+        cnt = User.query.filter(
+            db.func.date(User.created_at) == day
+        ).count()
+        monthly_labels.append(day.strftime('%d/%m'))
+        monthly_new_users.append(cnt)
+
+    # New users per month this year
+    yearly_labels = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12']
+    yearly_new_users = []
+    for m in range(1, 13):
+        cnt = User.query.filter(
+            extract('month', User.created_at) == m,
+            extract('year',  User.created_at) == current_year
+        ).count()
+        yearly_new_users.append(cnt)
+
+    # Top 5 users by sessions
+    from sqlalchemy import func as _func
+    top_readers = db.session.query(
+        User,
+        _func.count(ReadingSession.id).label('session_count'),
+        _func.sum(ReadingSession.words_read).label('total_words')
+    ).join(ReadingSession, ReadingSession.user_id == User.id)     .group_by(User.id)     .order_by(_func.count(ReadingSession.id).desc())     .limit(5).all()
+
+    return render_template(
+        'admin/dashboard.html',
+        stats=stats,
+        recent_users=recent_users,
+        recent_docs=recent_docs,
+        monthly_sessions=monthly_sessions,
+        monthly_docs=monthly_docs,
+        monthly_users=monthly_users,
+        completed=completed,
+        uncompleted=uncompleted,
+        classes_count=classes_count,
+        current_year=current_year,
+        weekly_labels=weekly_labels,
+        weekly_new_users=weekly_new_users,
+        monthly_labels=monthly_labels,
+        monthly_new_users=monthly_new_users,
+        yearly_labels=yearly_labels,
+        yearly_new_users=yearly_new_users,
+        top_readers=top_readers,
+    )
+
+
+# ===== LIST CLASS =====
+@admin_bp.route('/classes')
+@login_required
+def classes():
+    if not current_user.is_admin:
+        abort(403)
+
+    classes = Class.query.all()
+    return render_template('admin/classes.html', classes=classes)
+
+
+# ===== CREATE CLASS =====
+@admin_bp.route('/classes/create', methods=['POST'])
+@login_required
+def create_class():
+    if not current_user.is_admin:
+        abort(403)
+
+    name = request.form.get('name')
+    if not name:
+        return "Tên lớp không được để trống"
+
+    new_class = Class(name=name)
+    db.session.add(new_class)
+    db.session.commit()
+
+    return redirect(url_for('admin.classes'))
+
+
+# ===== DELETE CLASS =====
+@admin_bp.route('/classes/<int:class_id>/delete', methods=['POST'])
+@login_required
+def delete_class(class_id):
+    if not current_user.is_admin:
+        abort(403)
+
+    class_obj = Class.query.get_or_404(class_id)
+
+    # Xóa tất cả tài liệu trong lớp trước
+    Document.query.filter_by(class_id=class_id).delete()
+
+    db.session.delete(class_obj)
+    db.session.commit()
+
+    return redirect(url_for('admin.classes'))
+
+
+# ===== CLASS DETAIL =====
+@admin_bp.route('/classes/<int:class_id>')
+@login_required
+def class_detail(class_id):
+    if not current_user.is_admin:
+        abort(403)
+
+    class_obj = Class.query.get_or_404(class_id)
+    documents = Document.query.filter_by(class_id=class_id).all()
+
+    return render_template(
+        'admin/class_detail.html',
+        class_obj=class_obj,
+        documents=documents
+    )
+
+
+# ===== UPLOAD LESSON INTO CLASS =====
+@admin_bp.route('/classes/<int:class_id>/upload', methods=['POST'])
+@login_required
+def upload_to_class(class_id):
+    if not current_user.is_admin:
+        abort(403)
+
+    file = request.files.get('file')
+    if not file:
+        return "No file uploaded"
+
+    import pdfplumber
+    from docx import Document as DocxReader
+
+    filename = file.filename
+    ext = filename.split('.')[-1].lower()
+
+    content = ""
+
+    if ext == "txt":
+        raw = file.read().replace(b'\x00', b'')
+        content = raw.decode('utf-8', errors='ignore')
+
+    elif ext == "pdf":
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages:
+                content += page.extract_text() or ""
+
+    elif ext == "docx":
+        docx = DocxReader(file)
+        content = "\n".join([p.text for p in docx.paragraphs])
+
+    else:
+        return "Không hỗ trợ file này"
+
+    words = content.split()
+
+    new_doc = Document(
+        user_id=current_user.id,
+        filename=filename,
+        original_filename=filename,
+        file_type=ext,
+        word_count=len(words),
+        content=content,
+        class_id=class_id
+    )
+
+    db.session.add(new_doc)
+    db.session.commit()
+
+    return redirect(url_for('admin.class_detail', class_id=class_id))
+
+
+# ===== DELETE DOCUMENT FROM CLASS =====
+@admin_bp.route('/classes/<int:class_id>/document/<int:doc_id>/delete', methods=['POST'])
+@login_required
+def delete_class_document(class_id, doc_id):
+    if not current_user.is_admin:
+        abort(403)
+
+    doc = Document.query.filter_by(id=doc_id, class_id=class_id).first_or_404()
+    db.session.delete(doc)
+    db.session.commit()
+
+    return redirect(url_for('admin.class_detail', class_id=class_id))
+
+
+# ===== LIST USERS =====
 @admin_bp.route('/users')
 @login_required
-@admin_required
 def users():
+    if not current_user.is_admin:
+        abort(403)
+
+    q = request.args.get('q', '').strip()
+    role = request.args.get('role', 'all')
+    sort = request.args.get('sort', 'newest')
     page = request.args.get('page', 1, type=int)
-    per_page = Config.ITEMS_PER_PAGE
-    search = request.args.get('q', '', type=str).strip()
-    role = request.args.get('role', 'all', type=str)
-    sort_by = request.args.get('sort', 'newest', type=str)
 
     query = User.query
 
-    if search:
-        like = f"%{search}%"
+    if q:
         query = query.filter(
-            or_(
-                User.username.ilike(like),
-                User.email.ilike(like)
+            db.or_(
+                User.username.ilike(f'%{q}%'),
+                User.email.ilike(f'%{q}%')
             )
         )
 
     if role == 'admin':
-        query = query.filter(User.is_admin.is_(True))
+        query = query.filter_by(is_admin=True)
     elif role == 'user':
-        query = query.filter(User.is_admin.is_(False))
+        query = query.filter_by(is_admin=False)
 
-    if sort_by == 'oldest':
+    if sort == 'oldest':
         query = query.order_by(User.created_at.asc())
-    elif sort_by == 'most_active':
-        query = query.outerjoin(ReadingSession) \
-            .group_by(User.id) \
-            .order_by(db.func.count(ReadingSession.id).desc(), User.created_at.desc())
     else:
         query = query.order_by(User.created_at.desc())
 
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    pagination = query.paginate(page=page, per_page=15, error_out=False)
 
-    return render_template(
-        'admin/users.html',
-        pagination=pagination,
-        filters={
-            'q': search,
-            'role': role,
-            'sort': sort_by
-        }
-    )
+    filters = {'q': q, 'role': role, 'sort': sort}
 
-@admin_bp.route('/user/<int:user_id>/details')
+    return render_template('admin/users.html', pagination=pagination, filters=filters)
+
+
+# ===== USER DETAIL API =====
+@admin_bp.route('/users/<int:user_id>/detail')
 @login_required
-@admin_required
-def user_details(user_id):
-    user = User.query.get(user_id)
+def user_detail(user_id):
+    if not current_user.is_admin:
+        abort(403)
 
-    if not user:
-        return jsonify({'error': 'Không tìm thấy!'}), 404
-
+    user = User.query.get_or_404(user_id)
     stats = user.get_stats()
-    recent_sessions = ReadingSession.query \
-        .filter_by(user_id=user.id) \
-        .order_by(ReadingSession.created_at.desc()) \
-        .limit(5) \
-        .all()
 
     return jsonify({
         'id': user.id,
         'username': user.username,
         'email': user.email,
         'is_admin': user.is_admin,
-        'created_at': format_local_date(user.created_at),
-        'stats': {
-            'total_sessions': stats.get('total_sessions', 0),
-            'completed_sessions': stats.get('completed_sessions', 0),
-            'total_words': stats.get('total_words', 0),
-            'total_time': stats.get('total_time', 0),
-            'avg_speed': stats.get('avg_speed', 0),
-            'total_documents': stats.get('total_documents', 0)
-        },
-        'recent_sessions': [
-            {
-                'id': session.id,
-                'filename': session.filename,
-                'created_at': format_local_datetime(session.created_at, session.tz_offset, session.tz_name),
-                'speed': session.speed,
-                'completed': session.completed,
-                'progress': session.get_completion_rate()
-            }
-            for session in recent_sessions
-        ]
+        'created_at': user.created_at.strftime('%d/%m/%Y %H:%M'),
+        'stats': stats
     })
 
-@admin_bp.route('/documents')
+
+# ===== DELETE USER =====
+@admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
 @login_required
-@admin_required
-def documents():
-    page = request.args.get('page', 1, type=int)
-    per_page = Config.ITEMS_PER_PAGE
-    search = request.args.get('q', '', type=str).strip()
-    file_type = request.args.get('type', 'all', type=str)
-    sort_by = request.args.get('sort', 'newest', type=str)
-
-    base_query = Document.query.join(User)
-
-    if search:
-        like = f"%{search}%"
-        base_query = base_query.filter(
-            or_(
-                Document.original_filename.ilike(like),
-                User.username.ilike(like)
-            )
-        )
-
-    if file_type != 'all':
-        base_query = base_query.filter(Document.file_type == file_type)
-
-    total_docs = base_query.count()
-    pdf_count = base_query.filter(Document.file_type == 'pdf').count()
-    docx_count = base_query.filter(Document.file_type == 'docx').count()
-    txt_count = base_query.filter(Document.file_type == 'txt').count()
-
-    query = base_query
-    if sort_by == 'oldest':
-        query = query.order_by(Document.created_at.asc())
-    elif sort_by == 'most_read':
-        query = query.outerjoin(ReadingSession) \
-            .group_by(Document.id) \
-            .order_by(db.func.count(ReadingSession.id).desc(), Document.created_at.desc())
-    elif sort_by == 'largest':
-        query = query.order_by(Document.word_count.desc())
-    else:
-        query = query.order_by(Document.created_at.desc())
-
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    return render_template(
-        'admin/documents.html',
-        pagination=pagination,
-        stats={
-            'total_docs': total_docs,
-            'pdf_count': pdf_count,
-            'docx_count': docx_count,
-            'txt_count': txt_count
-        },
-        filters={
-            'q': search,
-            'type': file_type,
-            'sort': sort_by
-        }
-    )
-
-@admin_bp.route('/document/<int:doc_id>/details')
-@login_required
-@admin_required
-def document_details(doc_id):
-    doc = Document.query.get(doc_id)
-
-    if not doc:
-        return jsonify({'error': 'Không tìm thấy!'}), 404
-
-    recent_sessions = ReadingSession.query \
-        .filter_by(document_id=doc.id) \
-        .order_by(ReadingSession.created_at.desc()) \
-        .limit(5) \
-        .all()
-
-    return jsonify({
-        'id': doc.id,
-        'filename': doc.original_filename,
-        'file_type': doc.file_type,
-        'word_count': doc.word_count,
-        'created_at': format_local_date(doc.created_at, doc.tz_offset, doc.tz_name),
-        'uploader': {
-            'id': doc.user.id,
-            'username': doc.user.username,
-            'email': doc.user.email
-        },
-        'total_reads': doc.times_read(),
-        'recent_sessions': [
-            {
-                'id': session.id,
-                'user': session.user.username,
-                'created_at': format_local_datetime(session.created_at, session.tz_offset, session.tz_name),
-                'speed': session.speed,
-                'duration': session.duration,
-                'completed': session.completed,
-                'progress': session.get_completion_rate()
-            }
-            for session in recent_sessions
-        ]
-    })
-
-@admin_bp.route('/sessions')
-@login_required
-@admin_required
-def sessions():
-    page = request.args.get('page', 1, type=int)
-    per_page = Config.ITEMS_PER_PAGE
-    search = request.args.get('q', '', type=str).strip()
-    status = request.args.get('status', 'all', type=str)
-    date_filter = request.args.get('date', 'all', type=str)
-    sort_by = request.args.get('sort', 'newest', type=str)
-
-    query = ReadingSession.query.join(User)
-
-    if search:
-        like = f"%{search}%"
-        query = query.filter(
-            or_(
-                User.username.ilike(like),
-                ReadingSession.filename.ilike(like)
-            )
-        )
-
-    if status == 'completed':
-        query = query.filter(ReadingSession.completed.is_(True))
-    elif status == 'incomplete':
-        query = query.filter(ReadingSession.completed.is_(False))
-
-    if date_filter != 'all':
-        now = datetime.now()
-        if date_filter == 'today':
-            start_date = datetime(now.year, now.month, now.day)
-        elif date_filter == 'week':
-            start_date = datetime(now.year, now.month, now.day) - timedelta(days=now.weekday())
-        elif date_filter == 'month':
-            start_date = datetime(now.year, now.month, 1)
-        else:
-            start_date = None
-
-        if start_date:
-            query = query.filter(ReadingSession.created_at >= start_date)
-
-    total_sessions = query.count()
-    completed_count = query.filter(ReadingSession.completed.is_(True)).count()
-    incomplete_count = query.filter(ReadingSession.completed.is_(False)).count()
-    avg_speed = query.with_entities(db.func.avg(ReadingSession.speed)).scalar() or 0
-
-    if sort_by == 'oldest':
-        query = query.order_by(ReadingSession.created_at.asc())
-    elif sort_by == 'fastest':
-        query = query.order_by(ReadingSession.speed.desc())
-    else:
-        query = query.order_by(ReadingSession.created_at.desc())
-
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    return render_template(
-        'admin/sessions.html',
-        pagination=pagination,
-        stats={
-            'total_sessions': total_sessions,
-            'completed_count': completed_count,
-            'incomplete_count': incomplete_count,
-            'avg_speed': round(avg_speed)
-        },
-        filters={
-            'q': search,
-            'status': status,
-            'date': date_filter,
-            'sort': sort_by
-        }
-    )
-
-@admin_bp.route('/delete-user/<int:user_id>', methods=['DELETE'])
-@login_required
-@admin_required
 def delete_user(user_id):
-    user = User.query.get(user_id)
+    if not current_user.is_admin:
+        abort(403)
 
-    if not user:
-        return jsonify({'error': 'Không tìm thấy!'}), 404
+    user = User.query.get_or_404(user_id)
 
     if user.is_admin:
-        return jsonify({'error': 'Không thể xóa admin!'}), 403
+        return jsonify({'error': 'Không thể xóa tài khoản Admin'}), 403
+
+    if user.id == current_user.id:
+        return jsonify({'error': 'Không thể tự xóa tài khoản của mình'}), 403
 
     db.session.delete(user)
     db.session.commit()
 
-    return jsonify({'success': True, 'message': f'Đã xóa user {user.username}!'})
+    return jsonify({'success': True})
+
+
+# ===== REPORT =====
+@admin_bp.route('/report')
+@login_required
+def report():
+    if not current_user.is_admin:
+        abort(403)
+
+    from datetime import datetime, timedelta
+
+    # --- filters ---
+    date_from_str = request.args.get('date_from', '')
+    date_to_str   = request.args.get('date_to', '')
+    user_id_str   = request.args.get('user_id', '')
+    class_id_str  = request.args.get('class_id', '')
+    page          = request.args.get('page', 1, type=int)
+
+    date_from = None
+    date_to   = None
+    try:
+        if date_from_str:
+            date_from = datetime.strptime(date_from_str, '%Y-%m-%d')
+        if date_to_str:
+            date_to   = datetime.strptime(date_to_str, '%Y-%m-%d') + timedelta(days=1)
+    except ValueError:
+        pass
+
+    # --- KPI ---
+    total_users    = User.query.count()
+    total_docs     = Document.query.count()
+    total_sessions = ReadingSession.query.count()
+    avg_speed_raw  = db.session.query(db.func.avg(ReadingSession.speed)).scalar()
+    avg_speed      = round(avg_speed_raw) if avg_speed_raw else 0
+    completed_count   = ReadingSession.query.filter_by(completed=True).count()
+    uncompleted_count = ReadingSession.query.filter_by(completed=False).count()
+
+    # --- chart: sessions per month (current year) ---
+    current_year = datetime.utcnow().year
+    monthly = []
+    for m in range(1, 13):
+        cnt = ReadingSession.query.filter(
+            extract('month', ReadingSession.created_at) == m,
+            extract('year',  ReadingSession.created_at) == current_year
+        ).count()
+        monthly.append(cnt)
+
+    # --- detail table query ---
+    q = db.session.query(ReadingSession, User)\
+        .join(User, ReadingSession.user_id == User.id)
+
+    if date_from:
+        q = q.filter(ReadingSession.created_at >= date_from)
+    if date_to:
+        q = q.filter(ReadingSession.created_at < date_to)
+    if user_id_str:
+        try:
+            q = q.filter(ReadingSession.user_id == int(user_id_str))
+        except ValueError:
+            pass
+
+    q = q.order_by(ReadingSession.created_at.desc())
+    pagination = q.paginate(page=page, per_page=20, error_out=False)
+
+    all_users   = User.query.order_by(User.username).all()
+    all_classes = Class.query.order_by(Class.name).all()
+
+    filters = {
+        'date_from': date_from_str,
+        'date_to':   date_to_str,
+        'user_id':   user_id_str,
+        'class_id':  class_id_str,
+    }
+
+    return render_template(
+        'admin/report.html',
+        total_users=total_users,
+        total_docs=total_docs,
+        total_sessions=total_sessions,
+        avg_speed=avg_speed,
+        completed_count=completed_count,
+        uncompleted_count=uncompleted_count,
+        monthly=monthly,
+        pagination=pagination,
+        all_users=all_users,
+        all_classes=all_classes,
+        filters=filters,
+        current_year=current_year,
+    )
+
+
+# ===== EXPORT CSV =====
+@admin_bp.route('/report/export')
+@login_required
+def export_report():
+    if not current_user.is_admin:
+        abort(403)
+
+    from datetime import datetime, timedelta
+    import csv, io
+    from flask import Response
+
+    date_from_str = request.args.get('date_from', '')
+    date_to_str   = request.args.get('date_to', '')
+    user_id_str   = request.args.get('user_id', '')
+
+    date_from = None
+    date_to   = None
+    try:
+        if date_from_str:
+            date_from = datetime.strptime(date_from_str, '%Y-%m-%d')
+        if date_to_str:
+            date_to   = datetime.strptime(date_to_str, '%Y-%m-%d') + timedelta(days=1)
+    except ValueError:
+        pass
+
+    q = db.session.query(ReadingSession, User)\
+        .join(User, ReadingSession.user_id == User.id)
+
+    if date_from:
+        q = q.filter(ReadingSession.created_at >= date_from)
+    if date_to:
+        q = q.filter(ReadingSession.created_at < date_to)
+    if user_id_str:
+        try:
+            q = q.filter(ReadingSession.user_id == int(user_id_str))
+        except ValueError:
+            pass
+
+    q = q.order_by(ReadingSession.created_at.desc())
+    rows = q.all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Người dùng', 'Tài liệu', 'Tổng từ', 'Từ đã đọc',
+                     'Tốc độ (từ/phút)', 'Thời gian (giây)', 'Hoàn thành', 'Ngày tạo'])
+
+    for session, user in rows:
+        writer.writerow([
+            session.id,
+            user.username,
+            session.filename,
+            session.total_words,
+            session.words_read,
+            session.speed,
+            session.duration,
+            'Có' if session.completed else 'Chưa',
+            session.created_at.strftime('%d/%m/%Y %H:%M'),
+        ])
+
+    output.seek(0)
+    filename = f"baocao_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        '\ufeff' + output.getvalue(),   # BOM for Excel UTF-8
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )

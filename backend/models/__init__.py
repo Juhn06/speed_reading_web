@@ -1,5 +1,5 @@
-from models.user import User
-from models.document import Document
-from models.reading_session import ReadingSession
-
-__all__ = ["User", "Document", "ReadingSession"]
+from .user import User
+from .document import Document
+from .reading_session import ReadingSession
+from .class_models import Class 
+__all__ = ["User", "Document", "ReadingSession", "Class"]

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Admin{% endblock %}</title>
+
+    <!-- Font Awesome - cần thiết cho icons sidebar -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+<div class="admin-layout">
+
+    <!-- SIDEBAR -->
+    {% include 'admin/sidebar.html' %}
+
+    <!-- CONTENT -->
+    <div class="admin-content">
+        {% block content %}{% endblock %}
+    </div>
+
+</div>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

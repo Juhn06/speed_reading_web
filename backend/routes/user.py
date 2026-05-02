@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, url_for
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from uuid import uuid4
@@ -7,8 +7,7 @@ from datetime import datetime, timedelta
 
 from config.database import db
 from config.settings import Config
-from models.reading_session import ReadingSession
-from models.document import Document
+from backend.models import Document, ReadingSession
 from services.stats_calculator import StatsCalculator
 
 user_bp = Blueprint('user', __name__, url_prefix='/user')
@@ -16,6 +15,9 @@ user_bp = Blueprint('user', __name__, url_prefix='/user')
 @user_bp.route('/dashboard')
 @login_required
 def dashboard():
+    if current_user.is_admin:
+        return redirect(url_for('admin.dashboard'))
+        
     stats = current_user.get_stats()
 
     recent_sessions = ReadingSession.query.filter_by(user_id=current_user.id) \

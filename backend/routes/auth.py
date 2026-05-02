@@ -2,14 +2,18 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, current_user
 
 from config.database import db
-from models.user import User
+from backend.models import User
 from utils.validators import validate_username, validate_email, validate_password
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
+
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
+        # 🔥 phân luồng nếu đã login
+        if current_user.is_admin:
+            return redirect(url_for('admin.dashboard'))
         return redirect(url_for('user.dashboard'))
 
     if request.method == 'POST':
@@ -56,9 +60,13 @@ def register():
 
     return render_template('auth/register.html')
 
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
+        # 🔥 phân luồng nếu đã login
+        if current_user.is_admin:
+            return redirect(url_for('admin.dashboard'))
         return redirect(url_for('user.dashboard'))
 
     if request.method == 'POST':
@@ -75,11 +83,18 @@ def login():
         else:
             login_user(user, remember=remember)
 
-            next_page = request.args.get('next')
             flash(f'Chào mừng trở lại, {user.username}!', 'success')
-            return redirect(next_page) if next_page else redirect(url_for('user.dashboard'))
+
+            # 🔥 PHÂN LUỒNG CHÍNH Ở ĐÂY
+            next_page = request.args.get('next')
+
+            if user.is_admin:
+                return redirect(next_page) if next_page else redirect(url_for('admin.dashboard'))
+            else:
+                return redirect(next_page) if next_page else redirect(url_for('user.dashboard'))
 
     return render_template('auth/login.html')
+
 
 @auth_bp.route('/logout')
 def logout():

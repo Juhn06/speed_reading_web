@@ -170,10 +170,11 @@
             }
 
             localStorage.setItem('words', JSON.stringify(data.words));
-            localStorage.setItem('speed', '200');
             localStorage.setItem('filename', data.filename);
             localStorage.setItem('doc_id', data.doc_id);
             localStorage.setItem('total_words', data.total);
+            localStorage.setItem('pendingShowCompletionSpeedChooser', '1');
+            localStorage.setItem('from_page', 'history');
 
             window.location.href = '/reading/reader';
         } catch (error) {

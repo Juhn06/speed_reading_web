@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask_login import UserMixin
 from flask_bcrypt import generate_password_hash, check_password_hash
-
+from backend.models.reading_session import ReadingSession
 from config.database import db
 
 class User(UserMixin, db.Model):
@@ -58,4 +58,3 @@ class User(UserMixin, db.Model):
             'total_documents': self.documents.count()
         }
 
-from models.reading_session import ReadingSession

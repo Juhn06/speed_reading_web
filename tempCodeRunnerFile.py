@@ -1,0 +1,2 @@
+
+BACKEND_DIR = PROJECT_ROOT / 'backend'
